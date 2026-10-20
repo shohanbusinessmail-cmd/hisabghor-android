@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -73,6 +74,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ExtendedFloatingActionButton
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 // ---------------- recurring rules ----------------
 
@@ -136,12 +156,19 @@ fun RecurringScreen(onBack: () -> Unit) {
     var showEditor by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<RecurringRuleEntity?>(null) }
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "নিয়মিত আয়/খরচ", onBack = onBack) },
+    HgScreen(
+        title = "নিয়মিত আয়/খরচ",
+        subtitle = "স্বয়ংক্রিয় এন্ট্রির নিয়ম",
+        onBack = onBack,
         floatingActionButton = {
-            FloatingActionButton(onClick = { editing = null; showEditor = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন নিয়ম যোগ করুন")
-            }
+            ExtendedFloatingActionButton(
+                onClick = { editing = null; showEditor = true },
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন নিয়ম", style = MaterialTheme.typography.labelLarge) }
+            )
         }
     ) { padding ->
         if (rules.isEmpty()) {
@@ -153,63 +180,88 @@ fun RecurringScreen(onBack: () -> Unit) {
                 onAction = { editing = null; showEditor = true },
                 modifier = Modifier.padding(padding)
             )
-        } else {
-            LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                items(rules, key = { it.id }) { rule ->
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+            return@HgScreen
+        }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            items(rules, key = { it.id }) { rule ->
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs),
+                    padding = PaddingValues(Space.lg)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconChip(
+                            Icons.Filled.Autorenew,
+                            tint = if (rule.isIncome) Hg.colors.income else Hg.colors.expense,
+                            background = if (rule.isIncome) Hg.colors.incomeTint else Hg.colors.expenseTint
+                        )
+                        Spacer(Modifier.width(Space.md))
+                        Column(Modifier.weight(1f)) {
                             Text(
                                 rule.title,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Hg.colors.ink,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
+                                overflow = TextOverflow.Ellipsis
                             )
-                            AmountText(
-                                rule.amountPoisha,
-                                color = if (rule.isIncome) Emerald600 else Danger600
-                            )
-                        }
-                        Text(
-                            (if (rule.isIncome) "আয়" else "খরচ") + " • " + rule.frequency.bnLabel() +
-                                " • পরের এন্ট্রি ${Dates.formatShortDate(rule.nextRunDate)}" +
-                                (rule.endDate?.let { " • শেষ ${Dates.formatShortDate(it)}" } ?: "") +
-                                if (!rule.enabled) " • বন্ধ" else "",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        rule.lastRunAt?.let {
                             Text(
-                                "সর্বশেষ এন্ট্রি: ${Dates.formatShortDate(it)}",
+                                (if (rule.isIncome) "আয়" else "খরচ") + " • " + rule.frequency.bnLabel() +
+                                    " • পরের এন্ট্রি ${Dates.formatShortDate(rule.nextRunDate)}" +
+                                    (rule.endDate?.let { " • শেষ ${Dates.formatShortDate(it)}" } ?: "") +
+                                    if (!rule.enabled) " • বন্ধ" else "",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Hg.colors.inkSecondary
                             )
                         }
-                        Row(
-                            Modifier.fillMaxWidth().padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("চালু", style = MaterialTheme.typography.bodySmall)
-                            Switch(
-                                checked = rule.enabled,
-                                onCheckedChange = { checked ->
-                                    viewModel.update(rule.copy(enabled = checked))
-                                }
-                            )
-                            Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { editing = rule; showEditor = true }) {
-                                Text("বদলান")
-                            }
-                            TextButton(onClick = { deleting = rule }) {
-                                Text("মুছুন", color = Danger600)
-                            }
-                        }
+                        AmountText(
+                            rule.amountPoisha,
+                            style = HgAmountType.small,
+                            color = if (rule.isIncome) Hg.colors.income else Hg.colors.expense
+                        )
                     }
-                    HorizontalDivider(Modifier.padding(start = 16.dp))
+                    rule.lastRunAt?.let {
+                        Spacer(Modifier.height(Space.xs))
+                        Text(
+                            "সর্বশেষ এন্ট্রি: ${Dates.formatShortDate(it)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkTertiary
+                        )
+                    }
+                    Spacer(Modifier.height(Space.sm))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(
+                            checked = rule.enabled,
+                            onCheckedChange = { checked ->
+                                viewModel.update(rule.copy(enabled = checked))
+                            },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                checkedTrackColor = Hg.colors.brand,
+                                uncheckedThumbColor = Hg.colors.surface,
+                                uncheckedTrackColor = Hg.colors.surfaceSunken,
+                                uncheckedBorderColor = Hg.colors.hairlineStrong
+                            )
+                        )
+                        Spacer(Modifier.width(Space.sm))
+                        Text(
+                            if (rule.enabled) "চালু" else "বন্ধ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkSecondary
+                        )
+                        Spacer(Modifier.weight(1f))
+                        HgButton(
+                            text = "বদলান",
+                            onClick = { editing = rule; showEditor = true },
+                            style = HgButtonStyle.Ghost
+                        )
+                        HgButton(
+                            text = "মুছুন",
+                            onClick = { deleting = rule },
+                            style = HgButtonStyle.Ghost
+                        )
+                    }
                 }
             }
         }
@@ -236,27 +288,24 @@ fun RecurringScreen(onBack: () -> Unit) {
         val categoryOptions = if (isIncome) incomeCats else expenseCats
         AlertDialog(
             onDismissRequest = { showEditor = false },
+            containerColor = Hg.colors.surface,
+            shape = Radius.panel,
             title = { Text(if (editing == null) "নতুন নিয়ম" else "নিয়ম বদলান") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = !isIncome,
-                            onClick = { isIncome = false },
-                            label = { Text("খরচ") }
-                        )
-                        FilterChip(
-                            selected = isIncome,
-                            onClick = { isIncome = true },
-                            label = { Text("আয়") }
-                        )
-                    }
-                    OutlinedTextField(
+                Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
+                    HgSegmented(
+                        options = listOf(false, true),
+                        selected = isIncome,
+                        label = { if (it) "আয়" else "খরচ" },
+                        onSelect = {
+                            isIncome = it
+                            categoryId = null
+                        }
+                    )
+                    HgTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("শিরোনাম") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        label = "শিরোনাম"
                     )
                     MoneyInputField(
                         value = amountText,
@@ -279,43 +328,67 @@ fun RecurringScreen(onBack: () -> Unit) {
                         optionLabel = { it.name },
                         onSelect = { accountId = it.id }
                     )
-                    Row(
-                        Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
+                    HgSegmented(
+                        options = listOf(
                             RepeatRule.DAILY, RepeatRule.WEEKLY,
                             RepeatRule.MONTHLY, RepeatRule.YEARLY
-                        ).forEach { rule ->
-                            FilterChip(
-                                selected = frequency == rule,
-                                onClick = { frequency = rule },
-                                label = { Text(rule.bnLabel()) }
-                            )
-                        }
-                    }
+                        ),
+                        selected = frequency,
+                        label = { it.bnLabel() },
+                        onSelect = { frequency = it }
+                    )
                     DateField(
                         date = nextRun,
                         onDateChange = { nextRun = it },
                         label = "প্রথম/পরের এন্ট্রির তারিখ"
                     )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("শেষ তারিখ আছে")
-                        Switch(checked = hasEnd, onCheckedChange = { hasEnd = it })
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "শেষ তারিখ আছে",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Hg.colors.ink,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Switch(
+                            checked = hasEnd,
+                            onCheckedChange = { hasEnd = it },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                checkedTrackColor = Hg.colors.brand,
+                                uncheckedThumbColor = Hg.colors.surface,
+                                uncheckedTrackColor = Hg.colors.surfaceSunken,
+                                uncheckedBorderColor = Hg.colors.hairlineStrong
+                            )
+                        )
                     }
                     if (hasEnd) {
                         DateField(date = endDate, onDateChange = { endDate = it }, label = "শেষ তারিখ")
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("নিজে থেকে এন্ট্রি তৈরি করুন")
+                            Text(
+                                "নিজে থেকে এন্ট্রি তৈরি করুন",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Hg.colors.ink
+                            )
                             Text(
                                 "বন্ধ থাকলে শুধু রিমাইন্ডার হিসাবে কাজ করবে",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Hg.colors.inkSecondary
                             )
                         }
-                        Switch(checked = autoCreate, onCheckedChange = { autoCreate = it })
+                        Spacer(Modifier.width(Space.sm))
+                        Switch(
+                            checked = autoCreate,
+                            onCheckedChange = { autoCreate = it },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                checkedTrackColor = Hg.colors.brand,
+                                uncheckedThumbColor = Hg.colors.surface,
+                                uncheckedTrackColor = Hg.colors.surfaceSunken,
+                                uncheckedBorderColor = Hg.colors.hairlineStrong
+                            )
+                        )
                     }
                 }
             },
@@ -366,10 +439,12 @@ fun RecurringScreen(onBack: () -> Unit) {
                             showEditor = false
                         }
                     }
-                }) { Text("সংরক্ষণ করুন") }
+                }) { Text("সংরক্ষণ করুন", color = Hg.colors.brand) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditor = false }) { Text("বাতিল") }
+                TextButton(onClick = { showEditor = false }) {
+                    Text("বাতিল", color = Hg.colors.inkSecondary)
+                }
             }
         )
     }
@@ -382,26 +457,6 @@ fun RecurringScreen(onBack: () -> Unit) {
             onConfirm = { viewModel.delete(rule); deleting = null },
             onDismiss = { deleting = null }
         )
-    }
-}
-
-// ---------------- net worth items ----------------
-
-class NetWorthItemsViewModel(private val planning: PlanningRepository) : ViewModel() {
-
-    val items: StateFlow<List<NetWorthItemEntity>> = planning.observeNetWorthItems()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun add(item: NetWorthItemEntity) {
-        viewModelScope.launch { planning.addNetWorthItem(item) }
-    }
-
-    fun update(item: NetWorthItemEntity) {
-        viewModelScope.launch { planning.updateNetWorthItem(item) }
-    }
-
-    fun delete(item: NetWorthItemEntity) {
-        viewModelScope.launch { planning.deleteNetWorthItem(item) }
     }
 }
 
@@ -420,33 +475,48 @@ fun NetWorthItemsScreen(onBack: () -> Unit) {
     val assetTotal = assets.sumOf { it.valuePoisha }
     val liabilityTotal = liabilities.sumOf { it.valuePoisha }
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "অতিরিক্ত সম্পদ ও দায়", onBack = onBack) },
+    HgScreen(
+        title = "অতিরিক্ত সম্পদ ও দায়",
+        subtitle = "নেট সম্পদের হিসাব",
+        onBack = onBack,
         floatingActionButton = {
-            FloatingActionButton(onClick = { editing = null; showEditor = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন আইটেম যোগ করুন")
-            }
+            ExtendedFloatingActionButton(
+                onClick = { editing = null; showEditor = true },
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন আইটেম", style = MaterialTheme.typography.labelLarge) }
+            )
         }
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
             item {
-                Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "অ্যাকাউন্টের বাইরের সম্পদ (জমি, সোনা, পণ্য) ও দায় এখানে রাখুন — এগুলো নেট সম্পদের হিসাবেই শুধু যুক্ত হয়, কোনো ব্যালান্স বদলায় না।",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("মোট অতিরিক্ত সম্পদ")
-                            AmountText(assetTotal, color = Emerald600)
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.md),
+                    padding = PaddingValues(Space.lg)
+                ) {
+                    Row(Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Eyebrow("অতিরিক্ত সম্পদ")
+                            Spacer(Modifier.height(Space.xs))
+                            AmountText(assetTotal, style = HgAmountType.medium, color = Hg.colors.income)
                         }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("মোট অতিরিক্ত দায়")
-                            AmountText(liabilityTotal, color = Danger600)
+                        Column(Modifier.weight(1f)) {
+                            Eyebrow("অতিরিক্ত দায়")
+                            Spacer(Modifier.height(Space.xs))
+                            AmountText(liabilityTotal, style = HgAmountType.medium, color = Hg.colors.expense)
                         }
                     }
+                    Spacer(Modifier.height(Space.sm))
+                    Text(
+                        "জমি, সোনা, পণ্য বা অন্য দায় এখানে রাখুন — এগুলো নেট সম্পদের হিসাবেই যুক্ত হয়, কোনো ব্যালান্স বদলায় না।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
                 }
             }
             if (items.isEmpty()) {
@@ -464,29 +534,67 @@ fun NetWorthItemsScreen(onBack: () -> Unit) {
                 Text(
                     "সম্পদ",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    color = Hg.colors.ink,
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)
                 )
             }
-            items(assets, key = { it.id }) { item ->
-                NetWorthItemRow(
-                    item = item,
-                    onEdit = { editing = item; showEditor = true },
-                    onDelete = { deleting = item }
-                )
+            if (assets.isEmpty()) {
+                item {
+                    Text(
+                        "কোনো অতিরিক্ত সম্পদ যোগ করা হয়নি।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkTertiary,
+                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs)
+                    )
+                }
+            }
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding),
+                    padding = PaddingValues(vertical = Space.xs)
+                ) {
+                    assets.forEachIndexed { index, item ->
+                        NetWorthItemRow(
+                            item = item,
+                            onEdit = { editing = item; showEditor = true },
+                            onDelete = { deleting = item }
+                        )
+                        if (index != assets.lastIndex) HgDivider(startInset = 20)
+                    }
+                }
             }
             item {
                 Text(
                     "দায়",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    color = Hg.colors.ink,
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)
                 )
             }
-            items(liabilities, key = { it.id }) { item ->
-                NetWorthItemRow(
-                    item = item,
-                    onEdit = { editing = item; showEditor = true },
-                    onDelete = { deleting = item }
-                )
+            if (liabilities.isEmpty()) {
+                item {
+                    Text(
+                        "কোনো অতিরিক্ত দায় যোগ করা হয়নি।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkTertiary,
+                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs)
+                    )
+                }
+            }
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding),
+                    padding = PaddingValues(vertical = Space.xs)
+                ) {
+                    liabilities.forEachIndexed { index, item ->
+                        NetWorthItemRow(
+                            item = item,
+                            onEdit = { editing = item; showEditor = true },
+                            onDelete = { deleting = item }
+                        )
+                        if (index != liabilities.lastIndex) HgDivider(startInset = 20)
+                    }
+                }
             }
         }
     }
@@ -501,25 +609,22 @@ fun NetWorthItemsScreen(onBack: () -> Unit) {
         var dialogError by remember { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = { showEditor = false },
+            containerColor = Hg.colors.surface,
+            shape = Radius.panel,
             title = { Text(if (editing == null) "নতুন সম্পদ/দায়" else "আইটেম বদলান") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NetWorthItemKind.entries.forEach { k ->
-                            FilterChip(
-                                selected = kind == k,
-                                onClick = { kind = k },
-                                label = { Text(k.bnLabel()) }
-                            )
-                        }
-                    }
-                    OutlinedTextField(
+                Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
+                    HgSegmented(
+                        options = NetWorthItemKind.entries,
+                        selected = kind,
+                        label = { it.bnLabel() },
+                        onSelect = { kind = it }
+                    )
+                    HgTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("নাম") },
-                        placeholder = { Text("যেমন: জমি, সোনা, ধান") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        label = "নাম",
+                        placeholder = "যেমন: জমি, সোনা, ধান"
                     )
                     MoneyInputField(
                         value = valueText,
@@ -527,11 +632,10 @@ fun NetWorthItemsScreen(onBack: () -> Unit) {
                         label = "আনুমানিক মূল্য (টাকা)",
                         error = dialogError
                     )
-                    OutlinedTextField(
+                    HgTextField(
                         value = noteText,
                         onValueChange = { noteText = it },
-                        label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                        modifier = Modifier.fillMaxWidth()
+                        label = "মন্তব্য (ঐচ্ছিক)"
                     )
                 }
             },
@@ -567,10 +671,12 @@ fun NetWorthItemsScreen(onBack: () -> Unit) {
                             showEditor = false
                         }
                     }
-                }) { Text("সংরক্ষণ করুন") }
+                }) { Text("সংরক্ষণ করুন", color = Hg.colors.brand) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditor = false }) { Text("বাতিল") }
+                TextButton(onClick = { showEditor = false }) {
+                    Text("বাতিল", color = Hg.colors.inkSecondary)
+                }
             }
         )
     }
@@ -592,27 +698,54 @@ private fun NetWorthItemRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            item.note?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
+    Column {
+        HgListRow(
+            title = item.name,
+            subtitle = item.note,
+            leading = {
+                IconChip(
+                    Icons.Filled.Diamond,
+                    tint = if (item.kind == NetWorthItemKind.ASSET) Hg.colors.income else Hg.colors.expense,
+                    background = if (item.kind == NetWorthItemKind.ASSET) Hg.colors.incomeTint
+                    else Hg.colors.expenseTint
+                )
+            },
+            trailing = {
+                AmountText(
+                    item.valuePoisha,
+                    style = HgAmountType.small,
+                    color = if (item.kind == NetWorthItemKind.ASSET) Hg.colors.income
+                    else Hg.colors.expense
+                )
             }
-        }
-        AmountText(
-            item.valuePoisha,
-            color = if (item.kind == NetWorthItemKind.ASSET) Emerald600 else Danger600
         )
-        TextButton(onClick = onEdit) { Text("বদলান") }
-        TextButton(onClick = onDelete) { Text("মুছুন", color = Danger600) }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = Space.lg),
+            horizontalArrangement = Arrangement.End
+        ) {
+            HgButton(text = "বদলান", onClick = onEdit, style = HgButtonStyle.Ghost)
+            HgButton(text = "মুছুন", onClick = onDelete, style = HgButtonStyle.Ghost)
+        }
     }
-    HorizontalDivider(Modifier.padding(start = 16.dp))
 }
+
+// ---------------- net worth items ----------------
+
+class NetWorthItemsViewModel(private val planning: PlanningRepository) : ViewModel() {
+
+    val items: StateFlow<List<NetWorthItemEntity>> = planning.observeNetWorthItems()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun add(item: NetWorthItemEntity) {
+        viewModelScope.launch { planning.addNetWorthItem(item) }
+    }
+
+    fun update(item: NetWorthItemEntity) {
+        viewModelScope.launch { planning.updateNetWorthItem(item) }
+    }
+
+    fun delete(item: NetWorthItemEntity) {
+        viewModelScope.launch { planning.deleteNetWorthItem(item) }
+    }
+}
+
