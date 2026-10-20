@@ -145,6 +145,30 @@ object PostingFactory {
     )
 
     /**
+     * Disbursement where the lender kept an upfront charge: liability is the
+     * full principal, cash received is less, and the difference is an expense
+     * (service charge) recorded openly — never hidden.
+     */
+    fun loanReceiveWithUpfrontCharge(
+        loanId: Long,
+        accountId: Long,
+        principalPoisha: Long,
+        disbursedPoisha: Long,
+        chargeCategoryId: Long?
+    ): List<PostingDraft> {
+        pos(principalPoisha, "principal")
+        pos(disbursedPoisha, "disbursed")
+        require(disbursedPoisha <= principalPoisha) { "disbursed cannot exceed principal" }
+        val charge = principalPoisha - disbursedPoisha
+        if (charge > 0) require(chargeCategoryId != null) { "upfront charge needs a category" }
+        return build(
+            PostingDraft(LedgerType.ACCOUNT, accountId, disbursedPoisha),
+            PostingDraft(LedgerType.EXPENSE_CATEGORY, chargeCategoryId ?: 0, charge),
+            PostingDraft(LedgerType.LOAN_LIABILITY, loanId, -principalPoisha)
+        )
+    }
+
+    /**
      * Loan repayment. Principal reduces liability only; interest and fees are
      * expenses recorded under their own categories.
      */

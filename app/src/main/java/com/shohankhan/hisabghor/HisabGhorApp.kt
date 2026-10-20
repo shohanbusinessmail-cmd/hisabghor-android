@@ -2,7 +2,12 @@ package com.shohankhan.hisabghor
 
 import android.app.Application
 import androidx.work.Configuration
+import com.shohankhan.hisabghor.data.SeedData
 import com.shohankhan.hisabghor.di.AppContainer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Application entry point. Holds the manual dependency container and provides
@@ -13,9 +18,15 @@ class HisabGhorApp : Application(), Configuration.Provider {
     lateinit var container: AppContainer
         private set
 
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        appScope.launch {
+            SeedData.seedIfEmpty(container.database)
+            container.planningRepository.materializeDueRecurringRules()
+        }
     }
 
     override val workManagerConfiguration: Configuration

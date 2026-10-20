@@ -92,6 +92,11 @@ android {
     }
 }
 
+ksp {
+    // Export Room schemas so future migrations can be written & tested.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
