@@ -41,6 +41,11 @@ import com.shohankhan.hisabghor.feature.debts.DebtListScreen
 import com.shohankhan.hisabghor.feature.debts.PersonDetailScreen
 import com.shohankhan.hisabghor.feature.debts.PersonEditorScreen
 import com.shohankhan.hisabghor.feature.loans.LoanDetailScreen
+import com.shohankhan.hisabghor.feature.more.MoreScreen
+import com.shohankhan.hisabghor.feature.reports.ReportsScreen
+import com.shohankhan.hisabghor.feature.search.SearchScreen
+import com.shohankhan.hisabghor.feature.settings.AboutScreen
+import com.shohankhan.hisabghor.feature.settings.SettingsScreen
 import com.shohankhan.hisabghor.feature.loans.LoanEditorScreen
 import com.shohankhan.hisabghor.feature.loans.LoanListScreen
 import com.shohankhan.hisabghor.feature.loans.LoanPaymentScreen
@@ -190,15 +195,51 @@ fun MainNavigation() {
                     onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
                 )
             }
-            placeholder(Routes.Reports)
+            composable(Routes.Reports) {
+                ReportsScreen(
+                    onOpenNetWorthItems = { navController.navigate(Routes.NetWorthItems) }
+                )
+            }
             composable(Routes.Accounts) {
                 AccountListScreen(
                     onAddAccount = { navController.navigate(Routes.accountEditor()) },
                     onOpenAccount = { navController.navigate(Routes.accountDetail(it)) }
                 )
             }
-            placeholder(Routes.More)
-            placeholder(Routes.Search)
+            composable(Routes.More) {
+                MoreScreen(
+                    onNavigate = { key ->
+                        val route = when (key) {
+                            "shops" -> Routes.Shops
+                            "debts" -> Routes.Debts
+                            "loans" -> Routes.Loans
+                            "savings" -> Routes.Savings
+                            "budgets" -> Routes.Budgets
+                            "reminders" -> Routes.Reminders
+                            "recurring" -> Routes.Recurring
+                            "categories" -> Routes.Categories
+                            "networth" -> Routes.NetWorthItems
+                            "search" -> Routes.Search
+                            "settings" -> Routes.Settings
+                            "about" -> Routes.About
+                            else -> Routes.More
+                        }
+                        navController.navigate(route)
+                    }
+                )
+            }
+            composable(Routes.Search) {
+                SearchScreen(
+                    onBack = { navController.pop() },
+                    onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) },
+                    onOpenShop = { navController.navigate(Routes.shopDetail(it)) },
+                    onOpenPerson = { navController.navigate(Routes.personDetail(it)) },
+                    onOpenLoan = { navController.navigate(Routes.loanDetail(it)) },
+                    onOpenAgreement = { navController.navigate(Routes.agreementDetail(it)) },
+                    onOpenAccount = { navController.navigate(Routes.accountDetail(it)) },
+                    onOpenCategory = { navController.navigate(Routes.categoryEditor(it)) }
+                )
+            }
             composable(
                 Routes.TransactionEditor,
                 arguments = listOf(
@@ -448,8 +489,15 @@ fun MainNavigation() {
             composable(Routes.NetWorthItems) {
                 NetWorthItemsScreen(onBack = { navController.pop() })
             }
-            placeholder(Routes.Settings)
-            placeholder(Routes.About)
+            composable(Routes.Settings) {
+                SettingsScreen(
+                    onBack = { navController.pop() },
+                    onOpenAbout = { navController.navigate(Routes.About) }
+                )
+            }
+            composable(Routes.About) {
+                AboutScreen(onBack = { navController.pop() })
+            }
         }
     }
 }
