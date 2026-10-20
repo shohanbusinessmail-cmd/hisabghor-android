@@ -708,7 +708,7 @@ fun LoanDetailScreen(
                             },
                             onClick = { editingInstallment = inst }
                         )
-                        if (index != state.installments.lastIndex) HgDivider(startInset = Space.lg)
+                        if (index != state.installments.lastIndex) HgDivider(startInset = 20)
                     }
                 }
             }
