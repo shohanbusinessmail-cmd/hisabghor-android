@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,6 +59,7 @@ import com.shohankhan.hisabghor.core.database.CategoryEntity
 import com.shohankhan.hisabghor.core.database.ReminderEntity
 import com.shohankhan.hisabghor.core.designsystem.ConfirmDialog
 import com.shohankhan.hisabghor.core.designsystem.Danger600
+import com.shohankhan.hisabghor.core.designsystem.AmountText
 import com.shohankhan.hisabghor.core.designsystem.DateField
 import com.shohankhan.hisabghor.core.designsystem.EmptyState
 import com.shohankhan.hisabghor.core.designsystem.HisabTopBar
@@ -81,6 +83,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ExtendedFloatingActionButton
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgBadge
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 // ---------------- budgets ----------------
 
@@ -122,13 +142,21 @@ fun BudgetsScreen(onBack: () -> Unit) {
     var editing by remember { mutableStateOf<BudgetEntity?>(null) }
     var showEditor by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<BudgetEntity?>(null) }
+    val overLimitCount = budgets.count { it.remainingPoisha < 0 }
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "বাজেট", onBack = onBack) },
+    HgScreen(
+        title = "বাজেট",
+        subtitle = "খরচের সীমা",
+        onBack = onBack,
         floatingActionButton = {
-            FloatingActionButton(onClick = { editing = null; showEditor = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন বাজেট যোগ করুন")
-            }
+            ExtendedFloatingActionButton(
+                onClick = { editing = null; showEditor = true },
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন বাজেট", style = MaterialTheme.typography.labelLarge) }
+            )
         }
     ) { padding ->
         if (budgets.isEmpty()) {
@@ -140,72 +168,106 @@ fun BudgetsScreen(onBack: () -> Unit) {
                 onAction = { editing = null; showEditor = true },
                 modifier = Modifier.padding(padding)
             )
-        } else {
-            LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                items(budgets, key = { it.budget.id }) { item ->
-                    val budget = item.budget
-                    val overLimit = item.remainingPoisha < 0
-                    val percent = (item.usageFraction * 10000).toInt()
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                (item.category?.name ?: "সব খরচ") + " • " + budget.period.bnLabel() +
-                                    if (!budget.active) " (বন্ধ)" else "",
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                BengaliNumber.formatPercentBp(percent),
-                                color = if (overLimit) Danger600 else MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        LabeledProgress(
-                            fraction = item.usageFraction,
-                            leftText = "খরচ ${formatAmount(item.spentPoisha)}",
-                            rightText = "বাজেট ${formatAmount(budget.amountPoisha)}",
-                            overLimit = overLimit
-                        )
-                        Text(
-                            if (overLimit) "সীমা ছাড়িয়েছে ${formatAmount(-item.remainingPoisha)}"
-                            else "বাকি আছে ${formatAmount(item.remainingPoisha)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (overLimit) Danger600
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "সময়কাল: ${Dates.formatShortDate(item.periodFromMs)} — ${Dates.formatShortDate(item.periodToMs - 1)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Row(
-                            Modifier.fillMaxWidth().padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("সক্রিয়", style = MaterialTheme.typography.bodySmall)
-                            Switch(
-                                checked = budget.active,
-                                onCheckedChange = { checked ->
-                                    viewModel.update(budget.copy(active = checked))
-                                }
-                            )
-                            Spacer(Modifier.weight(1f))
-                            TextButton(onClick = { editing = budget; showEditor = true }) {
-                                Text("বদলান")
-                            }
-                            TextButton(onClick = { deleting = budget }) {
-                                Text("মুছুন", color = Danger600)
-                            }
-                        }
+            return@HgScreen
+        }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            item {
+                Row(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)
+                ) {
+                    HgBadge("${BengaliNumber.formatCount(budgets.size.toLong())}টি বাজেট")
+                    if (overLimitCount > 0) {
+                        Spacer(Modifier.width(Space.sm))
+                        HgBadge("${overLimitCount}টি সীমা ছাড়িয়েছে", tone = HgTone.Expense)
                     }
-                    HorizontalDivider(Modifier.padding(start = 16.dp))
+                }
+            }
+            items(budgets, key = { it.budget.id }) { item ->
+                val budget = item.budget
+                val overLimit = item.remainingPoisha < 0
+                val percent = (item.usageFraction * 10000).toInt()
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs),
+                    padding = PaddingValues(Space.lg)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconChip(Icons.Filled.PieChart)
+                        Spacer(Modifier.width(Space.md))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                item.category?.name ?: "সব খরচ",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Hg.colors.ink,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                budget.period.bnLabel() + if (!budget.active) " • বন্ধ" else "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Hg.colors.inkSecondary
+                            )
+                        }
+                        Text(
+                            BengaliNumber.formatPercentBp(percent),
+                            color = if (overLimit) Hg.colors.expense else Hg.colors.brand,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                    Spacer(Modifier.height(Space.md))
+                    LabeledProgress(
+                        fraction = item.usageFraction,
+                        leftText = "খরচ ${formatAmount(item.spentPoisha)}",
+                        rightText = "বাজেট ${formatAmount(budget.amountPoisha)}",
+                        overLimit = overLimit
+                    )
+                    Spacer(Modifier.height(Space.sm))
+                    Text(
+                        if (overLimit) "সীমা ছাড়িয়েছে ${formatAmount(-item.remainingPoisha)}"
+                        else "বাকি আছে ${formatAmount(item.remainingPoisha)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (overLimit) Hg.colors.expense else Hg.colors.inkSecondary
+                    )
+                    Text(
+                        "সময়কাল: ${Dates.formatShortDate(item.periodFromMs)} — ${Dates.formatShortDate(item.periodToMs - 1)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkTertiary
+                    )
+                    Spacer(Modifier.height(Space.sm))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(
+                            checked = budget.active,
+                            onCheckedChange = { checked ->
+                                viewModel.update(budget.copy(active = checked))
+                            },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                checkedTrackColor = Hg.colors.brand,
+                                uncheckedThumbColor = Hg.colors.surface,
+                                uncheckedTrackColor = Hg.colors.surfaceSunken,
+                                uncheckedBorderColor = Hg.colors.hairlineStrong
+                            )
+                        )
+                        Spacer(Modifier.width(Space.sm))
+                        Text(
+                            if (budget.active) "সক্রিয়" else "বন্ধ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkSecondary
+                        )
+                        Spacer(Modifier.weight(1f))
+                        HgButton(
+                            text = "বদলান",
+                            onClick = { editing = budget; showEditor = true },
+                            style = HgButtonStyle.Ghost
+                        )
+                        HgButton(
+                            text = "মুছুন",
+                            onClick = { deleting = budget },
+                            style = HgButtonStyle.Ghost
+                        )
+                    }
                 }
             }
         }
@@ -223,9 +285,11 @@ fun BudgetsScreen(onBack: () -> Unit) {
         var dialogError by remember { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = { showEditor = false },
+            containerColor = Hg.colors.surface,
+            shape = Radius.panel,
             title = { Text(if (editing == null) "নতুন বাজেট" else "বাজেট বদলান") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
                     SelectionField(
                         label = "খরচের ক্যাটাগরি",
                         selectedText = categories.firstOrNull { it.id == categoryId }?.name ?: "সব খরচ",
@@ -233,15 +297,12 @@ fun BudgetsScreen(onBack: () -> Unit) {
                         optionLabel = { it.name },
                         onSelect = { categoryId = it.id }
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BudgetPeriod.entries.forEach { p ->
-                            FilterChip(
-                                selected = period == p,
-                                onClick = { period = p },
-                                label = { Text(p.bnLabel()) }
-                            )
-                        }
-                    }
+                    HgSegmented(
+                        options = BudgetPeriod.entries,
+                        selected = period,
+                        label = { it.bnLabel() },
+                        onSelect = { period = it }
+                    )
                     MoneyInputField(
                         value = amountText,
                         onValueChange = { amountText = it },
@@ -249,21 +310,19 @@ fun BudgetsScreen(onBack: () -> Unit) {
                         error = dialogError
                     )
                     if (period == BudgetPeriod.MONTHLY) {
-                        OutlinedTextField(
+                        HgTextField(
                             value = anchorText,
                             onValueChange = { anchorText = it },
-                            label = { Text("মাস শুরুর তারিখ (১–২৮)") },
-                            supportingText = { Text("যেমন বেতন পেলে মাস শুরু ধরা হলে সেই তারিখ দিন") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth()
+                            label = "মাস শুরুর তারিখ (১–২৮)",
+                            helper = "বেতন পেলে মাস শুরু ধরা হলে সেই তারিখ দিন",
+                            keyboardType = KeyboardType.Number
                         )
                     }
                     if (period == BudgetPeriod.WEEKLY) {
                         Text(
                             "সাপ্তাহিক বাজেট শনিবার থেকে শুরু ধরা হয়।",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Hg.colors.inkSecondary
                         )
                     }
                 }
@@ -291,10 +350,12 @@ fun BudgetsScreen(onBack: () -> Unit) {
                         }
                         showEditor = false
                     }
-                }) { Text("সংরক্ষণ করুন") }
+                }) { Text("সংরক্ষণ করুন", color = Hg.colors.brand) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditor = false }) { Text("বাতিল") }
+                TextButton(onClick = { showEditor = false }) {
+                    Text("বাতিল", color = Hg.colors.inkSecondary)
+                }
             }
         )
     }
@@ -305,6 +366,300 @@ fun BudgetsScreen(onBack: () -> Unit) {
             message = "বাজেটটি মুছে যাবে; আপনার লেনদেন অপরিবর্তিত থাকবে।",
             confirmText = "মুছে ফেলুন",
             onConfirm = { viewModel.delete(budget); deleting = null },
+            onDismiss = { deleting = null }
+        )
+    }
+}
+
+@Composable
+fun RemindersScreen(onBack: () -> Unit) {
+    val container = rememberAppContainer()
+    val viewModel: RemindersViewModel = viewModel(
+        factory = hisabViewModelFactory {
+            RemindersViewModel(container.planningRepository, container.categoryRepository)
+        }
+    )
+    val reminders by viewModel.reminders.collectAsState()
+    val categories by viewModel.expenseCategories.collectAsState()
+    var editing by remember { mutableStateOf<ReminderEntity?>(null) }
+    var showEditor by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf<ReminderEntity?>(null) }
+
+    val context = LocalContext.current
+    var notificationGranted by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < 33 ||
+                ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> notificationGranted = granted }
+
+    val todayMs = Dates.startOfDayMs(Dates.nowMs())
+
+    HgScreen(
+        title = "রিমাইন্ডার",
+        subtitle = "বিল, কিস্তি ও তারিখের কথা",
+        onBack = onBack,
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { editing = null; showEditor = true },
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন রিমাইন্ডার", style = MaterialTheme.typography.labelLarge) }
+            )
+        }
+    ) { padding ->
+        if (reminders.isEmpty() && notificationGranted) {
+            EmptyState(
+                icon = Icons.Filled.Alarm,
+                title = "কোনো রিমাইন্ডার নেই",
+                subtitle = "বিল, ভাড়া, কিস্তি — যেকোনো তারিখের কথা মনে করিয়ে দেওয়ার জন্য রিমাইন্ডার দিন।",
+                actionLabel = "রিমাইন্ডার যোগ করুন",
+                onAction = { editing = null; showEditor = true },
+                modifier = Modifier.padding(padding)
+            )
+            return@HgScreen
+        }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            if (!notificationGranted) {
+                item {
+                    HgNotice(
+                        title = "নোটিফিকেশনের অনুমতি দিন",
+                        message = "সময়মতো জানান পেতে অনুমতি দিন। অনুমতি ছাড়াও রিমাইন্ডার অ্যাপের ভেতরে দেখা যাবে।",
+                        tone = HgTone.Warning,
+                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.md),
+                        action = {
+                            HgButton(
+                                text = "অনুমতি দিন",
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= 33) {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                },
+                                style = HgButtonStyle.Secondary
+                            )
+                        }
+                    )
+                }
+            }
+            if (reminders.isEmpty()) {
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.Alarm,
+                        title = "কোনো রিমাইন্ডার নেই",
+                        subtitle = "বিল, ভাড়া, কিস্তি — যেকোনো তারিখের কথা মনে করিয়ে দেওয়ার জন্য রিমাইন্ডার দিন।",
+                        actionLabel = "রিমাইন্ডার যোগ করুন",
+                        onAction = { editing = null; showEditor = true }
+                    )
+                }
+            }
+            items(reminders, key = { it.id }) { reminder ->
+                val overdue = reminder.enabled && reminder.doneAt == null &&
+                    reminder.dueDate < todayMs
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs),
+                    padding = PaddingValues(Space.lg)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconChip(
+                            Icons.Filled.Alarm,
+                            tint = if (reminder.doneAt != null) Hg.colors.inkSecondary
+                            else if (overdue) Hg.colors.warning else Hg.colors.brand,
+                            background = if (reminder.doneAt != null) Hg.colors.surfaceMuted
+                            else if (overdue) Hg.colors.warningTint else Hg.colors.brandTint
+                        )
+                        Spacer(Modifier.width(Space.md))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                reminder.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Hg.colors.ink,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                "${Dates.formatShortDate(reminder.dueDate)} • ${reminder.repeat.bnLabel()}" +
+                                    when {
+                                        overdue -> " • তারিখ পেরিয়েছে"
+                                        reminder.doneAt != null -> " • সম্পন্ন"
+                                        !reminder.enabled -> " • বন্ধ আছে"
+                                        else -> ""
+                                    },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (overdue) Hg.colors.expense else Hg.colors.inkSecondary
+                            )
+                        }
+                        reminder.amountPoisha?.let {
+                            AmountText(it, style = HgAmountType.small, color = Hg.colors.ink)
+                        }
+                    }
+                    reminder.note?.takeIf { it.isNotBlank() }?.let {
+                        Spacer(Modifier.height(Space.sm))
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = Hg.colors.inkSecondary)
+                    }
+                    Spacer(Modifier.height(Space.sm))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(
+                            checked = reminder.enabled,
+                            onCheckedChange = { checked ->
+                                viewModel.update(reminder.copy(enabled = checked))
+                            },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                checkedTrackColor = Hg.colors.brand,
+                                uncheckedThumbColor = Hg.colors.surface,
+                                uncheckedTrackColor = Hg.colors.surfaceSunken,
+                                uncheckedBorderColor = Hg.colors.hairlineStrong
+                            )
+                        )
+                        Spacer(Modifier.width(Space.sm))
+                        Text(
+                            if (reminder.enabled) "চালু" else "বন্ধ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkSecondary
+                        )
+                        Spacer(Modifier.weight(1f))
+                        if (reminder.doneAt == null) {
+                            HgButton(
+                                text = "হয়ে গেছে",
+                                onClick = { viewModel.markDone(reminder) },
+                                style = HgButtonStyle.Ghost
+                            )
+                        }
+                        HgButton(
+                            text = "বদলান",
+                            onClick = { editing = reminder; showEditor = true },
+                            style = HgButtonStyle.Ghost
+                        )
+                        HgButton(
+                            text = "মুছুন",
+                            onClick = { deleting = reminder },
+                            style = HgButtonStyle.Ghost
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showEditor) {
+        var title by remember { mutableStateOf(editing?.title ?: "") }
+        var amountText by remember {
+            mutableStateOf(editing?.amountPoisha?.let { poishaToInputText(it) } ?: "")
+        }
+        var dueDate by remember {
+            mutableStateOf(editing?.let { Dates.toLocalDate(it.dueDate) } ?: Dates.today())
+        }
+        var repeatRule by remember { mutableStateOf(editing?.repeat ?: RepeatRule.NONE) }
+        var categoryId by remember { mutableStateOf(editing?.categoryId) }
+        var noteText by remember { mutableStateOf(editing?.note ?: "") }
+        var dialogError by remember { mutableStateOf<String?>(null) }
+        AlertDialog(
+            onDismissRequest = { showEditor = false },
+            containerColor = Hg.colors.surface,
+            shape = Radius.panel,
+            title = { Text(if (editing == null) "নতুন রিমাইন্ডার" else "রিমাইন্ডার বদলান") },
+            text = {
+                Column(
+                    Modifier.padding(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(Space.md)
+                ) {
+                    HgTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = "কিসের রিমাইন্ডার?"
+                    )
+                    MoneyInputField(
+                        value = amountText,
+                        onValueChange = { amountText = it },
+                        label = "পরিমাণ (থাকলে)",
+                        error = dialogError
+                    )
+                    DateField(date = dueDate, onDateChange = { dueDate = it }, label = "তারিখ")
+                    HgSegmented(
+                        options = RepeatRule.entries,
+                        selected = repeatRule,
+                        label = { it.bnLabel() },
+                        onSelect = { repeatRule = it }
+                    )
+                    SelectionField(
+                        label = "ক্যাটাগরি (ঐচ্ছিক)",
+                        selectedText = categories.firstOrNull { it.id == categoryId }?.name ?: "কোনোটি নয়",
+                        options = categories,
+                        optionLabel = { it.name },
+                        onSelect = { categoryId = it.id }
+                    )
+                    HgTextField(
+                        value = noteText,
+                        onValueChange = { noteText = it },
+                        label = "মন্তব্য (ঐচ্ছিক)"
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val amount = if (amountText.isBlank()) null
+                    else BengaliNumber.parsePoisha(amountText)
+                    when {
+                        title.isBlank() -> dialogError = "শিরোনাম দিন"
+                        amountText.isNotBlank() && amount == null ->
+                            dialogError = "পরিমাণ সঠিক নয়"
+                        else -> {
+                            val now = Dates.nowMs()
+                            val existing = editing
+                            if (existing == null) {
+                                viewModel.add(
+                                    ReminderEntity(
+                                        title = title.trim(),
+                                        amountPoisha = amount,
+                                        dueDate = Dates.startOfDayMs(dueDate),
+                                        repeat = repeatRule,
+                                        categoryId = categoryId,
+                                        note = noteText.ifBlank { null },
+                                        createdAt = now, updatedAt = now
+                                    )
+                                )
+                            } else {
+                                viewModel.update(
+                                    existing.copy(
+                                        title = title.trim(),
+                                        amountPoisha = amount,
+                                        dueDate = Dates.startOfDayMs(dueDate),
+                                        repeat = repeatRule,
+                                        categoryId = categoryId,
+                                        note = noteText.ifBlank { null },
+                                        doneAt = null
+                                    )
+                                )
+                            }
+                            showEditor = false
+                        }
+                    }
+                }) { Text("সংরক্ষণ করুন", color = Hg.colors.brand) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditor = false }) {
+                    Text("বাতিল", color = Hg.colors.inkSecondary)
+                }
+            }
+        )
+    }
+
+    deleting?.let { reminder ->
+        ConfirmDialog(
+            title = "রিমাইন্ডার মুছে ফেলবেন?",
+            message = "\"${reminder.title}\" রিমাইন্ডারটি মুছে যাবে।",
+            confirmText = "মুছে ফেলুন",
+            onConfirm = { viewModel.delete(reminder); deleting = null },
             onDismiss = { deleting = null }
         )
     }
@@ -341,252 +696,3 @@ class RemindersViewModel(
     }
 }
 
-@Composable
-fun RemindersScreen(onBack: () -> Unit) {
-    val container = rememberAppContainer()
-    val viewModel: RemindersViewModel = viewModel(
-        factory = hisabViewModelFactory {
-            RemindersViewModel(container.planningRepository, container.categoryRepository)
-        }
-    )
-    val reminders by viewModel.reminders.collectAsState()
-    val categories by viewModel.expenseCategories.collectAsState()
-    var editing by remember { mutableStateOf<ReminderEntity?>(null) }
-    var showEditor by remember { mutableStateOf(false) }
-    var deleting by remember { mutableStateOf<ReminderEntity?>(null) }
-
-    val context = LocalContext.current
-    var notificationGranted by remember {
-        mutableStateOf(
-            Build.VERSION.SDK_INT < 33 ||
-                ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> notificationGranted = granted }
-
-    val todayMs = Dates.startOfDayMs(Dates.nowMs())
-
-    Scaffold(
-        topBar = { HisabTopBar(title = "রিমাইন্ডার", onBack = onBack) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { editing = null; showEditor = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন রিমাইন্ডার যোগ করুন")
-            }
-        }
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            if (!notificationGranted) {
-                Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "সময়মতো জানান পেতে নোটিফিকেশনের অনুমতি দিন। অনুমতি ছাড়াও রিমাইন্ডার অ্যাপের ভেতরে দেখা যাবে।",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = {
-                            if (Build.VERSION.SDK_INT >= 33) {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        }) { Text("নোটিফিকেশনের অনুমতি দিন") }
-                    }
-                }
-            }
-            if (reminders.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.Alarm,
-                    title = "কোনো রিমাইন্ডার নেই",
-                    subtitle = "বিল, ভাড়া, কিস্তি — যেকোনো তারিখের কথা মনে করিয়ে দেওয়ার জন্য রিমাইন্ডার দিন।",
-                    actionLabel = "রিমাইন্ডার যোগ করুন",
-                    onAction = { editing = null; showEditor = true }
-                )
-            } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(reminders, key = { it.id }) { reminder ->
-                        val overdue = reminder.enabled && reminder.doneAt == null &&
-                            reminder.dueDate < todayMs
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    reminder.title,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                reminder.amountPoisha?.let {
-                                    Text(formatAmount(it), style = MaterialTheme.typography.bodyMedium)
-                                }
-                            }
-                            Text(
-                                "${Dates.formatShortDate(reminder.dueDate)} • ${reminder.repeat.bnLabel()}" +
-                                    when {
-                                        overdue -> " • তারিখ পেরিয়েছে!"
-                                        reminder.doneAt != null -> " • সম্পন্ন"
-                                        !reminder.enabled -> " • বন্ধ আছে"
-                                        else -> ""
-                                    },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (overdue) Danger600
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            reminder.note?.let {
-                                Text(it, style = MaterialTheme.typography.bodySmall)
-                            }
-                            Row(
-                                Modifier.fillMaxWidth().padding(top = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("চালু", style = MaterialTheme.typography.bodySmall)
-                                Switch(
-                                    checked = reminder.enabled,
-                                    onCheckedChange = { checked ->
-                                        viewModel.update(reminder.copy(enabled = checked))
-                                    }
-                                )
-                                Spacer(Modifier.weight(1f))
-                                if (reminder.doneAt == null) {
-                                    TextButton(onClick = { viewModel.markDone(reminder) }) {
-                                        Text("হয়ে গেছে")
-                                    }
-                                }
-                                TextButton(onClick = { editing = reminder; showEditor = true }) {
-                                    Text("বদলান")
-                                }
-                                TextButton(onClick = { deleting = reminder }) {
-                                    Text("মুছুন", color = Danger600)
-                                }
-                            }
-                        }
-                        HorizontalDivider(Modifier.padding(start = 16.dp))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showEditor) {
-        var title by remember { mutableStateOf(editing?.title ?: "") }
-        var amountText by remember {
-            mutableStateOf(editing?.amountPoisha?.let { poishaToInputText(it) } ?: "")
-        }
-        var dueDate by remember {
-            mutableStateOf(editing?.let { Dates.toLocalDate(it.dueDate) } ?: Dates.today())
-        }
-        var repeat by remember { mutableStateOf(editing?.repeat ?: RepeatRule.NONE) }
-        var categoryId by remember { mutableStateOf(editing?.categoryId) }
-        var noteText by remember { mutableStateOf(editing?.note ?: "") }
-        var dialogError by remember { mutableStateOf<String?>(null) }
-        AlertDialog(
-            onDismissRequest = { showEditor = false },
-            title = { Text(if (editing == null) "নতুন রিমাইন্ডার" else "রিমাইন্ডার বদলান") },
-            text = {
-                Column(
-                    Modifier.padding(top = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text("কিসের রিমাইন্ডার?") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    MoneyInputField(
-                        value = amountText,
-                        onValueChange = { amountText = it },
-                        label = "পরিমাণ (থাকলে)",
-                        error = dialogError
-                    )
-                    DateField(date = dueDate, onDateChange = { dueDate = it }, label = "তারিখ")
-                    Row(
-                        Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        RepeatRule.entries.forEach { rule ->
-                            FilterChip(
-                                selected = repeat == rule,
-                                onClick = { repeat = rule },
-                                label = { Text(rule.bnLabel()) }
-                            )
-                        }
-                    }
-                    SelectionField(
-                        label = "ক্যাটাগরি (ঐচ্ছিক)",
-                        selectedText = categories.firstOrNull { it.id == categoryId }?.name ?: "কোনোটি নয়",
-                        options = categories,
-                        optionLabel = { it.name },
-                        onSelect = { categoryId = it.id }
-                    )
-                    OutlinedTextField(
-                        value = noteText,
-                        onValueChange = { noteText = it },
-                        label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val amount = if (amountText.isBlank()) null
-                    else BengaliNumber.parsePoisha(amountText)
-                    when {
-                        title.isBlank() -> dialogError = "শিরোনাম দিন"
-                        amountText.isNotBlank() && amount == null ->
-                            dialogError = "পরিমাণ সঠিক নয়"
-                        else -> {
-                            val now = Dates.nowMs()
-                            val existing = editing
-                            if (existing == null) {
-                                viewModel.add(
-                                    ReminderEntity(
-                                        title = title.trim(),
-                                        amountPoisha = amount,
-                                        dueDate = Dates.startOfDayMs(dueDate),
-                                        repeat = repeat,
-                                        categoryId = categoryId,
-                                        note = noteText.ifBlank { null },
-                                        createdAt = now, updatedAt = now
-                                    )
-                                )
-                            } else {
-                                viewModel.update(
-                                    existing.copy(
-                                        title = title.trim(),
-                                        amountPoisha = amount,
-                                        dueDate = Dates.startOfDayMs(dueDate),
-                                        repeat = repeat,
-                                        categoryId = categoryId,
-                                        note = noteText.ifBlank { null },
-                                        doneAt = null
-                                    )
-                                )
-                            }
-                            showEditor = false
-                        }
-                    }
-                }) { Text("সংরক্ষণ করুন") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditor = false }) { Text("বাতিল") }
-            }
-        )
-    }
-
-    deleting?.let { reminder ->
-        ConfirmDialog(
-            title = "রিমাইন্ডার মুছে ফেলবেন?",
-            message = "\"${reminder.title}\" রিমাইন্ডারটি মুছে যাবে।",
-            confirmText = "মুছে ফেলুন",
-            onConfirm = { viewModel.delete(reminder); deleting = null },
-            onDismiss = { deleting = null }
-        )
-    }
-}

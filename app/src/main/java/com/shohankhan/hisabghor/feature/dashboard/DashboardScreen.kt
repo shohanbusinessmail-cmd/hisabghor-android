@@ -1,8 +1,6 @@
 package com.shohankhan.hisabghor.feature.dashboard
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,60 +11,65 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.shohankhan.hisabghor.core.common.Dates
+import com.shohankhan.hisabghor.core.database.UpcomingInstallmentRow
 import com.shohankhan.hisabghor.core.designsystem.AmountText
-import com.shohankhan.hisabghor.core.designsystem.CategoryDonutChart
+import com.shohankhan.hisabghor.core.designsystem.CategoryBreakdownBars
 import com.shohankhan.hisabghor.core.designsystem.ChartLegend
-import com.shohankhan.hisabghor.core.designsystem.Emerald500
-import com.shohankhan.hisabghor.core.designsystem.Emerald600
-import com.shohankhan.hisabghor.core.designsystem.Emerald700
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
 import com.shohankhan.hisabghor.core.designsystem.IncomeExpenseBarChart
-import com.shohankhan.hisabghor.core.designsystem.LabeledProgress
 import com.shohankhan.hisabghor.core.designsystem.LoadingState
-import com.shohankhan.hisabghor.core.designsystem.colorFromHex
+import com.shohankhan.hisabghor.core.designsystem.QuickAction
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.SectionHeader
+import com.shohankhan.hisabghor.core.designsystem.Space
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.bnLabel
 import com.shohankhan.hisabghor.core.designsystem.formatAmount
 import com.shohankhan.hisabghor.core.money.BengaliNumber
 import com.shohankhan.hisabghor.di.hisabViewModelFactory
 import com.shohankhan.hisabghor.di.rememberAppContainer
 import com.shohankhan.hisabghor.feature.transactions.TransactionRow
+import java.time.LocalTime
 
 @Composable
 fun DashboardScreen(
@@ -107,192 +110,201 @@ fun DashboardScreen(
         return
     }
     val hide = state.hideAmounts
+    val now = Dates.nowMs()
+    val firstRun = state.recentTransactions.isEmpty() &&
+        state.totalBalancePoisha == 0L &&
+        state.cashPoisha == 0L
 
     LazyColumn(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .background(Hg.colors.canvas)
+            .statusBarsPadding()
     ) {
-        item { HeroCard(state, onSearch) { viewModel.setHideAmounts(!hide) } }
-
         item {
-            QuickActions(
-                onAddIncome, onAddExpense, onTransfer, onOpenShops,
-                onOpenDebts, onOpenSavings
+            DashboardHeader(
+                hideAmounts = hide,
+                onToggleHide = { viewModel.setHideAmounts(!hide) },
+                onSearch = onSearch
             )
         }
 
         item {
-            SectionCard(title = "এই মাসের সারাংশ") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MiniStat("আয়", state.monthIncomePoisha, Emerald600, hide)
-                    MiniStat("খরচ", state.monthExpensePoisha, Color(0xFFC62828), hide)
-                    MiniStat(
-                        "হাতে বাকি",
-                        state.monthIncomePoisha - state.monthExpensePoisha,
-                        MaterialTheme.colorScheme.onSurface, hide
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                if (state.monthlyCashFlow.any { it.incomePoisha > 0 || it.expensePoisha > 0 }) {
-                    IncomeExpenseBarChart(state.monthlyCashFlow)
-                    ChartLegend(Modifier.fillMaxWidth())
-                } else {
-                    EmptyHint("এখনো কোনো লেনদেন নেই — আয় বা খরচ যোগ করলে এখানে চার্ট দেখা যাবে।")
-                }
+            BalancePanel(state = state, hide = hide)
+        }
+
+        item {
+            QuickActionsRow(
+                onAddIncome = onAddIncome,
+                onAddExpense = onAddExpense,
+                onTransfer = onTransfer,
+                onOpenShops = onOpenShops
+            )
+        }
+
+        val reminder = attentionItems(state)
+        if (reminder.isNotEmpty()) {
+            item {
+                AttentionCard(items = reminder, onOpenBudgets = onOpenBudgets, onOpenLoans = onOpenLoans)
+            }
+        }
+
+        if (firstRun) {
+            item {
+                FirstRunCard(
+                    onAddIncome = onAddIncome,
+                    onAddExpense = onAddExpense
+                )
             }
         }
 
         item {
-            SectionCard(title = "অ্যাকাউন্টের অবস্থা") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MiniStat("ক্যাশ", state.cashPoisha, MaterialTheme.colorScheme.onSurface, hide)
-                    MiniStat("ব্যাংক/ওয়ালেট", state.bankMfsPoisha, MaterialTheme.colorScheme.onSurface, hide)
-                    MiniStat("সঞ্চয়", state.savingsPoisha, Emerald600, hide)
+            HgCard(
+                Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "গত ৬ মাসের আয় ও খরচ",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Hg.colors.ink
+                        )
+                        Text(
+                            "মাসিক মোট",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkSecondary
+                        )
+                    }
+                    ChartLegend()
+                }
+                Spacer(Modifier.height(Space.md))
+                if (state.monthlyCashFlow.any { it.incomePoisha > 0 || it.expensePoisha > 0 }) {
+                    IncomeExpenseBarChart(state.monthlyCashFlow)
+                } else {
+                    InlineHint("আয় বা খরচ যোগ করলে এখানে মাসভিত্তিক তুলনা দেখা যাবে।")
+                }
+                Spacer(Modifier.height(Space.sm))
+                HgDivider()
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = Space.md),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    MonthStat(
+                        label = "এই মাসের আয়",
+                        amount = state.monthIncomePoisha,
+                        color = Hg.colors.income,
+                        hide = hide,
+                        modifier = Modifier.weight(1f)
+                    )
+                    MonthStat(
+                        label = "এই মাসের খরচ",
+                        amount = state.monthExpensePoisha,
+                        color = Hg.colors.expense,
+                        hide = hide,
+                        modifier = Modifier.weight(1f)
+                    )
+                    MonthStat(
+                        label = "এই মাসে বাকি",
+                        amount = state.monthIncomePoisha - state.monthExpensePoisha,
+                        color = Hg.colors.ink,
+                        hide = hide,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
 
         if (state.monthExpenseByCategory.isNotEmpty()) {
             item {
-                SectionCard(title = "এই মাসে কোথায় খরচ হলো") {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm),
+                    onClick = onOpenReports
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CategoryDonutChart(state.monthExpenseByCategory)
-                        Spacer(Modifier.width(16.dp))
-                        Column(Modifier.weight(1f)) {
-                            state.monthExpenseByCategory.take(4).forEach { part ->
-                                Row(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(colorFromHex(part.colorHex))
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        part.categoryName,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1
-                                    )
-                                    AmountText(
-                                        kotlin.math.abs(part.totalPoisha),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        hidden = hide
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            "এই মাসে কোথায় খরচ হয়েছে",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Hg.colors.ink,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            "রিপোর্ট",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Hg.colors.brand
+                        )
                     }
-                    TextButton(onClick = onOpenReports) { Text("বিস্তারিত রিপোর্ট দেখুন") }
+                    Spacer(Modifier.height(Space.md))
+                    CategoryBreakdownBars(state.monthExpenseByCategory, maxItems = 4, hidden = hide)
                 }
             }
         }
 
         item {
-            SectionCard(title = "পাওনা ও দেনা") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    ClickableStat("পাওনা (অন্যের কাছে)", state.receivablesPoisha, Emerald600, hide, onOpenDebts)
-                    ClickableStat("ঋণের বাকি", state.payablesPoisha, Color(0xFFC62828), hide, onOpenLoans)
-                    ClickableStat("দোকানে বকেয়া", state.shopDuesPoisha, Color(0xFFB26A00), hide, onOpenShops)
-                }
-                state.netWorth?.let { nw ->
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("নিট সম্পদ (Net Worth)", style = MaterialTheme.typography.bodyMedium)
-                        AmountText(
-                            nw.netWorthPoisha,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (nw.netWorthPoisha >= 0) Emerald700 else Color(0xFFC62828),
-                            hidden = hide
-                        )
-                    }
-                }
-            }
-        }
-
-        if (state.upcomingInstallments.isNotEmpty()) {
-            item {
-                SectionCard(title = "আসন্ন কিস্তি") {
-                    state.upcomingInstallments.forEach { row ->
-                        val overdue = row.dueDate < Dates.startOfDayMs(Dates.nowMs())
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenLoans() }
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Filled.EventNote,
-                                contentDescription = null,
-                                tint = if (overdue) Color(0xFFC62828) else MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(row.organizationName, style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    (if (overdue) "মেয়াদ পেরিয়ে গেছে • " else "") +
-                                        Dates.formatShortDate(row.dueDate),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (overdue) Color(0xFFC62828)
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            AmountText(row.remainingPoisha, hidden = hide)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (state.budgets.isNotEmpty()) {
-            item {
-                SectionCard(title = "বাজেটের অবস্থা") {
-                    state.budgets.forEach { budget ->
-                        Column(Modifier.padding(vertical = 6.dp)) {
-                            Text(
-                                budget.category?.name ?: "সামগ্রিক খরচ",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            LabeledProgress(
-                                fraction = budget.usageFraction,
-                                leftText = "খরচ ${if (hide) "৳••••" else formatAmount(budget.spentPoisha)}",
-                                rightText = "বাজেট ${if (hide) "৳••••" else formatAmount(budget.budget.amountPoisha)}",
-                                overLimit = budget.isOverBudget
-                            )
-                        }
-                    }
-                    TextButton(onClick = onOpenBudgets) { Text("সব বাজেট দেখুন") }
-                }
-            }
+            PositionCard(
+                state = state,
+                hide = hide,
+                onOpenDebts = onOpenDebts,
+                onOpenLoans = onOpenLoans,
+                onOpenShops = onOpenShops
+            )
         }
 
         if (state.goals.isNotEmpty()) {
             item {
-                SectionCard(title = "সঞ্চয়ের লক্ষ্য") {
-                    state.goals.forEach { goal ->
-                        Column(Modifier.padding(vertical = 6.dp)) {
-                            Text(goal.goal.name, style = MaterialTheme.typography.bodyMedium)
-                            Spacer(Modifier.height(4.dp))
-                            LabeledProgress(
-                                fraction = goal.progressFraction,
-                                leftText = "জমেছে ${if (hide) "৳••••" else formatAmount(goal.savedPoisha)}",
-                                rightText = "লক্ষ্য ${if (hide) "৳••••" else formatAmount(goal.goal.targetPoisha)}"
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm),
+                    onClick = onOpenSavings
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "সঞ্চয়ের লক্ষ্য",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Hg.colors.ink,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            "সব দেখুন",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Hg.colors.brand
+                        )
+                    }
+                    Spacer(Modifier.height(Space.md))
+                    state.goals.forEachIndexed { index, goal ->
+                        if (index > 0) Spacer(Modifier.height(Space.md))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    goal.goal.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Hg.colors.ink,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "${if (hide) "৳••••" else formatAmount(goal.savedPoisha)} / " +
+                                        (if (hide) "৳••••" else formatAmount(goal.goal.targetPoisha)),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Hg.colors.inkSecondary
+                                )
+                            }
+                            Spacer(Modifier.width(Space.md))
+                            Text(
+                                BengaliNumber.toBengaliDigits(
+                                    "${(goal.progressFraction * 100).toInt()}%"
+                                ),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Hg.colors.brand
                             )
                         }
+                        Spacer(Modifier.height(Space.sm))
+                        com.shohankhan.hisabghor.core.designsystem.HgProgressBar(
+                            fraction = goal.progressFraction,
+                            height = 6
+                        )
                     }
-                    TextButton(onClick = onOpenSavings) { Text("সঞ্চয়ের বিস্তারিত") }
                 }
             }
         }
@@ -301,245 +313,498 @@ fun DashboardScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(start = ScreenPadding, end = ScreenPadding - 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("সাম্প্রতিক লেনদেন", style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = onSeeAllTransactions) { Text("সব দেখুন") }
+                Text(
+                    "সাম্প্রতিক লেনদেন",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink,
+                    modifier = Modifier.weight(1f)
+                )
+                androidx.compose.material3.TextButton(onClick = onSeeAllTransactions) {
+                    Text("সব দেখুন", color = Hg.colors.brand)
+                }
             }
         }
+
         if (state.recentTransactions.isEmpty()) {
             item {
-                Card(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                ) {
-                    EmptyHint("এখনো কোনো লেনদেন যোগ হয়নি। ওপরের বোতাম দিয়ে প্রথম আয় বা খরচ যোগ করুন।")
+                HgCard(Modifier.padding(horizontal = ScreenPadding)) {
+                    Text(
+                        "এখনো কোনো লেনদেন নেই।",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Hg.colors.ink
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "আয় বা খরচ যোগ করলে সর্বশেষ এন্ট্রিগুলো এখানে দেখা যাবে।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
                 }
             }
         } else {
-            items(state.recentTransactions, key = { it.id }) { txn ->
-                Card(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 3.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding),
+                    padding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.xs)
                 ) {
-                    TransactionRow(txn, onClick = { onOpenTransaction(txn.id) }, hideAmount = hide)
+                    state.recentTransactions.forEachIndexed { index, txn ->
+                        TransactionRow(
+                            transaction = txn,
+                            onClick = { onOpenTransaction(txn.id) },
+                            hideAmount = hide
+                        )
+                        if (index != state.recentTransactions.lastIndex) {
+                            HgDivider(startInset = ScreenPadding.value.toInt() - 4)
+                        }
+                    }
                 }
             }
         }
-        item { Spacer(Modifier.height(24.dp)) }
+
+        item {
+            Text(
+                text = "সব তথ্য শুধু এই ফোনে সংরক্ষিত • ${Dates.formatShortDate(now)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Hg.colors.inkTertiary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = ScreenPadding, vertical = Space.xxl),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
     }
 }
 
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+
 @Composable
-private fun HeroCard(state: DashboardUiState, onSearch: () -> Unit, onToggleHide: () -> Unit) {
-    val hide = state.hideAmounts
-    Box(
+private fun DashboardHeader(
+    hideAmounts: Boolean,
+    onToggleHide: () -> Unit,
+    onSearch: () -> Unit
+) {
+    Column(
         Modifier
             .fillMaxWidth()
-            .background(
-                Brush.linearGradient(listOf(Emerald500, Emerald600, Emerald700)),
-                shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
-            )
-            .padding(start = 20.dp, end = 20.dp, top = 44.dp, bottom = 22.dp)
+            .padding(start = ScreenPadding, end = Space.sm, top = Space.md, bottom = Space.sm)
     ) {
-        Column {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(Hg.colors.brand),
+                contentAlignment = Alignment.Center
             ) {
-                Column {
-                    Text(
-                        "হিসাবঘর",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White
-                    )
-                    Text(
-                        Dates.formatDate(Dates.nowMs()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
-                }
-                Row {
-                    IconButton(onClick = onToggleHide) {
-                        Icon(
-                            if (hide) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = if (hide) "টাকার অঙ্ক দেখান" else "টাকার অঙ্ক লুকান",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = onSearch) {
-                        Icon(
-                            Icons.Filled.Search,
-                            contentDescription = "খুঁজুন",
-                            tint = Color.White
-                        )
-                    }
-                }
+                Text(
+                    "হ",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White
+                )
             }
-            Spacer(Modifier.height(18.dp))
-            Text(
-                "সর্বমোট ব্যালান্স",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.85f)
-            )
-            AmountText(
-                state.totalBalancePoisha,
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
-                hidden = hide
-            )
-            Spacer(Modifier.height(14.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HeroChip(
-                    icon = Icons.AutoMirrored.Filled.TrendingUp,
-                    label = "আজকের আয়",
-                    amount = state.todayIncomePoisha,
-                    hide = hide,
-                    modifier = Modifier.weight(1f)
+            Spacer(Modifier.width(Space.sm))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "হিসাবঘর",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink
                 )
-                HeroChip(
-                    icon = Icons.AutoMirrored.Filled.TrendingDown,
-                    label = "আজকের খরচ",
-                    amount = state.todayExpensePoisha,
-                    hide = hide,
-                    modifier = Modifier.weight(1f)
+                Text(
+                    "${greeting()} • ${Dates.formatShortDate(Dates.nowMs())}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+            }
+            IconButton(onClick = onToggleHide) {
+                Icon(
+                    if (hideAmounts) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                    contentDescription = if (hideAmounts) "টাকার অঙ্ক দেখান" else "টাকার অঙ্ক লুকান",
+                    tint = Hg.colors.inkSecondary
+                )
+            }
+            IconButton(onClick = onSearch) {
+                Icon(Icons.Filled.Search, contentDescription = "খুঁজুন", tint = Hg.colors.inkSecondary)
             }
         }
     }
 }
 
+private fun greeting(): String {
+    val hour = LocalTime.now(Dates.dhaKaZone).hour
+    return when (hour) {
+        in 4..11 -> "শুভ সকাল"
+        in 12..15 -> "শুভ দুপুর"
+        in 16..17 -> "শুভ বিকেল"
+        in 18..19 -> "শুভ সন্ধ্যা"
+        else -> "শুভ রাত্রি"
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Balance
+// ---------------------------------------------------------------------------
+
 @Composable
-private fun HeroChip(
-    icon: ImageVector,
+private fun BalancePanel(
+    state: DashboardUiState,
+    hide: Boolean
+) {
+    HgCard(
+        Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs),
+        padding = androidx.compose.foundation.layout.PaddingValues(Space.xl)
+    ) {
+        Eyebrow("মোট ব্যালেন্স")
+        Spacer(Modifier.height(Space.xs))
+        AmountText(
+            state.totalBalancePoisha,
+            style = HgAmountType.hero,
+            color = Hg.colors.ink,
+            hidden = hide
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            "সব অ্যাকাউন্ট মিলিয়ে",
+            style = MaterialTheme.typography.bodySmall,
+            color = Hg.colors.inkSecondary
+        )
+        Spacer(Modifier.height(Space.lg))
+        HgDivider()
+        Spacer(Modifier.height(Space.md))
+        Row(Modifier.fillMaxWidth()) {
+            Breakdown(
+                label = "ক্যাশ",
+                amount = state.cashPoisha,
+                hide = hide,
+                modifier = Modifier.weight(1f)
+            )
+            Breakdown(
+                label = "ব্যাংক / মোবাইল",
+                amount = state.bankMfsPoisha,
+                hide = hide,
+                modifier = Modifier.weight(1f)
+            )
+            Breakdown(
+                label = "সঞ্চয়",
+                amount = state.savingsPoisha,
+                hide = hide,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        if (state.totalBalancePoisha == 0L) {
+            Spacer(Modifier.height(Space.md))
+            InlineHint("অ্যাকাউন্টে টাকা যোগ করতে অ্যাকাউন্ট স্ক্রিনে শুরুর ব্যালান্স দিন বা আয় যোগ করুন।")
+        }
+    }
+}
+
+@Composable
+private fun Breakdown(
     label: String,
     amount: Long,
     hide: Boolean,
     modifier: Modifier = Modifier
 ) {
+    Column(modifier) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = Hg.colors.inkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(2.dp))
+        AmountText(
+            amount,
+            style = HgAmountType.small,
+            color = Hg.colors.ink,
+            hidden = hide
+        )
+    }
+}
+
+@Composable
+private fun MonthStat(
+    label: String,
+    amount: Long,
+    color: Color,
+    hide: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = Hg.colors.inkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(2.dp))
+        AmountText(amount, style = HgAmountType.small, color = color, hidden = hide)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Quick actions
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun QuickActionsRow(
+    onAddIncome: () -> Unit,
+    onAddExpense: () -> Unit,
+    onTransfer: () -> Unit,
+    onOpenShops: () -> Unit
+) {
     Row(
-        modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.16f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = ScreenPadding, vertical = Space.md),
+        horizontalArrangement = Arrangement.spacedBy(Space.sm)
     ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(8.dp))
-        Column {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
-            AmountText(
-                amount,
+        QuickAction(
+            "আয় যোগ",
+            Icons.AutoMirrored.Filled.TrendingUp,
+            onAddIncome,
+            Modifier.weight(1f)
+        )
+        QuickAction(
+            "খরচ যোগ",
+            Icons.AutoMirrored.Filled.TrendingDown,
+            onAddExpense,
+            Modifier.weight(1f)
+        )
+        QuickAction(
+            "টাকা স্থানান্তর",
+            Icons.Filled.AccountBalanceWallet,
+            onTransfer,
+            Modifier.weight(1f)
+        )
+        QuickAction(
+            "বাকি খাতা",
+            Icons.Filled.Storefront,
+            onOpenShops,
+            Modifier.weight(1f)
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Attention / reminders
+// ---------------------------------------------------------------------------
+
+private data class AttentionItem(
+    val title: String,
+    val subtitle: String,
+    val amount: Long,
+    val tone: AttentionTone
+)
+
+private enum class AttentionTone { Due, Budget, ShopDue }
+
+private fun attentionItems(state: DashboardUiState): List<AttentionItem> {
+    val items = mutableListOf<AttentionItem>()
+    state.upcomingInstallments.take(2).forEach { row: UpcomingInstallmentRow ->
+        items += AttentionItem(
+            title = "${row.organizationName} • কিস্তি ${BengaliNumber.toBengaliDigits(row.seq.toString())}",
+            subtitle = "শেষ তারিখ ${Dates.formatShortDate(row.dueDate)}",
+            amount = row.remainingPoisha,
+            tone = AttentionTone.Due
+        )
+    }
+    state.budgets.filter { it.isOverBudget }.take(2).forEach { budget ->
+        items += AttentionItem(
+            title = "${budget.category?.name ?: "সামগ্রিক"} বাজেট ছাড়িয়েছে",
+            subtitle = "সীমা ${formatAmount(budget.budget.amountPoisha)}",
+            amount = budget.spentPoisha - budget.budget.amountPoisha,
+            tone = AttentionTone.Budget
+        )
+    }
+    if (state.shopDuesPoisha > 0) {
+        items += AttentionItem(
+            title = "দোকানে বাকি আছে",
+            subtitle = "পরিশোধ করলে দেনা কমবে",
+            amount = state.shopDuesPoisha,
+            tone = AttentionTone.ShopDue
+        )
+    }
+    return items.take(3)
+}
+
+@Composable
+private fun AttentionCard(
+    items: List<AttentionItem>,
+    onOpenBudgets: () -> Unit,
+    onOpenLoans: () -> Unit
+) {
+    HgCard(
+        Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs),
+        padding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.xs)
+    ) {
+        Row(
+            Modifier.padding(horizontal = Space.lg, vertical = Space.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Filled.Alarm,
+                contentDescription = null,
+                tint = Hg.colors.warning,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(Space.sm))
+            Text(
+                "মনে রাখুন",
                 style = MaterialTheme.typography.titleSmall,
-                color = Color.White,
-                hidden = hide
+                color = Hg.colors.ink
+            )
+        }
+        items.forEach { item ->
+            val icon = when (item.tone) {
+                AttentionTone.Due -> Icons.Filled.Payments
+                AttentionTone.Budget -> Icons.Filled.PieChart
+                AttentionTone.ShopDue -> Icons.Filled.Storefront
+            }
+            HgListRow(
+                title = item.title,
+                subtitle = item.subtitle,
+                leading = {
+                    IconChip(
+                        icon = icon,
+                        tint = Hg.colors.warning,
+                        background = Hg.colors.warningTint
+                    )
+                },
+                trailing = {
+                    AmountText(
+                        item.amount,
+                        style = HgAmountType.small,
+                        color = Hg.colors.warning
+                    )
+                },
+                onClick = when (item.tone) {
+                    AttentionTone.Budget -> onOpenBudgets
+                    else -> onOpenLoans
+                }
             )
         }
     }
 }
 
 @Composable
-private fun QuickActions(
-    onAddIncome: () -> Unit,
-    onAddExpense: () -> Unit,
-    onTransfer: () -> Unit,
-    onOpenShops: () -> Unit,
+private fun FirstRunCard(onAddIncome: () -> Unit, onAddExpense: () -> Unit) {
+    HgCard(Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)) {
+        Text(
+            "শুরু করুন",
+            style = MaterialTheme.typography.titleMedium,
+            color = Hg.colors.ink
+        )
+        Spacer(Modifier.height(Space.xs))
+        Text(
+            "প্রথমে একটি আয় বা খরচ যোগ করুন। অ্যাকাউন্টের ব্যালান্স নিজে থেকেই হিসাব হবে—আলাদা করে কোথাও লিখতে হবে না।",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.inkSecondary
+        )
+        Spacer(Modifier.height(Space.md))
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            com.shohankhan.hisabghor.core.designsystem.HgButton(
+                "আয় যোগ করুন",
+                onAddIncome,
+                style = com.shohankhan.hisabghor.core.designsystem.HgButtonStyle.Primary,
+                icon = Icons.AutoMirrored.Filled.TrendingUp
+            )
+            com.shohankhan.hisabghor.core.designsystem.HgButton(
+                "খরচ যোগ করুন",
+                onAddExpense,
+                style = com.shohankhan.hisabghor.core.designsystem.HgButtonStyle.Secondary,
+                icon = Icons.AutoMirrored.Filled.TrendingDown
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Positions
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun PositionCard(
+    state: DashboardUiState,
+    hide: Boolean,
     onOpenDebts: () -> Unit,
-    onOpenSavings: () -> Unit
+    onOpenLoans: () -> Unit,
+    onOpenShops: () -> Unit
 ) {
-    val actions = listOf(
-        Triple("আয় যোগ", Icons.Filled.Add, onAddIncome),
-        Triple("খরচ যোগ", Icons.Filled.ReceiptLong, onAddExpense),
-        Triple("ট্রান্সফার", Icons.Filled.SwapHoriz, onTransfer),
-        Triple("বাকি ক্রয়", Icons.Filled.Storefront, onOpenShops),
-        Triple("ধার/পাওনা", Icons.Filled.Handshake, onOpenDebts),
-        Triple("পরিশোধ", Icons.Filled.Payments, onOpenDebts),
-        Triple("সঞ্চয়", Icons.Filled.Savings, onOpenSavings)
-    )
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    HgCard(
+        Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm),
+        padding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.xs)
     ) {
-        actions.forEach { (label, icon, action) ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { action() }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Box(
-                    Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, contentDescription = label, tint = Emerald700)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(label, style = MaterialTheme.typography.labelMedium)
+        Row(
+            Modifier.padding(horizontal = Space.lg, vertical = Space.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "পাওনা ও দেনা",
+                style = MaterialTheme.typography.titleMedium,
+                color = Hg.colors.ink,
+                modifier = Modifier.weight(1f)
+            )
+            state.netWorth?.let { nw ->
+                Text(
+                    "নিট সম্পদ ${if (hide) "৳••••" else formatAmount(nw.netWorthPoisha)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary
+                )
             }
         }
+        HgListRow(
+            title = "পাওনা (আমি পাব)",
+            subtitle = "ধার দেওয়া ও ব্যক্তিগত বাকি",
+            leading = { IconChip(Icons.Filled.Handshake, tint = Hg.colors.income, background = Hg.colors.incomeTint) },
+            trailing = { AmountText(state.receivablesPoisha, style = HgAmountType.small, color = Hg.colors.income, hidden = hide) },
+            onClick = onOpenDebts
+        )
+        HgListRow(
+            title = "ঋণের বাকি (আমি দেব)",
+            subtitle = "এনজিও, ব্যাংক ও ব্যক্তিগত ধার",
+            leading = { IconChip(Icons.Filled.Payments, tint = Hg.colors.expense, background = Hg.colors.expenseTint) },
+            trailing = { AmountText(state.payablesPoisha, style = HgAmountType.small, color = Hg.colors.expense, hidden = hide) },
+            onClick = onOpenLoans
+        )
+        HgListRow(
+            title = "দোকানে বকেয়া",
+            subtitle = "বাকি কেনা ও পরিশোধ",
+            leading = { IconChip(Icons.Filled.Storefront, tint = Hg.colors.warning, background = Hg.colors.warningTint) },
+            trailing = { AmountText(state.shopDuesPoisha, style = HgAmountType.small, color = Hg.colors.warning, hidden = hide) },
+            onClick = onOpenShops
+        )
     }
 }
 
+// ---------------------------------------------------------------------------
+// Small pieces
+// ---------------------------------------------------------------------------
+
 @Composable
-private fun SectionCard(title: String, content: @Composable () -> Unit) {
-    Card(
+private fun InlineHint(text: String) {
+    Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(18.dp)
+            .clip(Radius.smShape)
+            .background(Hg.colors.surfaceMuted)
+            .padding(Space.md)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(10.dp))
-            content()
-        }
+        Text(
+            text,
+            style = MaterialTheme.typography.bodySmall,
+            color = Hg.colors.inkSecondary
+        )
     }
 }
 
-@Composable
-private fun MiniStat(label: String, amount: Long, color: Color, hide: Boolean) {
-    Column {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        AmountText(amount, style = MaterialTheme.typography.titleSmall, color = color, hidden = hide)
-    }
-}
-
-@Composable
-private fun ClickableStat(label: String, amount: Long, color: Color, hide: Boolean, onClick: () -> Unit) {
-    Column(
-        Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
-            .padding(4.dp)
-    ) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        AmountText(amount, style = MaterialTheme.typography.titleSmall, color = color, hidden = hide)
-    }
-}
-
-@Composable
-private fun EmptyHint(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(16.dp)
-    )
-}
-
-// Used by quick-action "আয়" semantics in tests/previews.
+// Kept for previews/semantics parity with earlier builds.
 internal fun dashboardTodayLabel(): String = BengaliNumber.toBengaliDigits(Dates.formatDate(Dates.nowMs()))

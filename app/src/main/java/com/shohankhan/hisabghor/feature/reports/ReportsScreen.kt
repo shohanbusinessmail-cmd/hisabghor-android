@@ -57,6 +57,19 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.time.LocalDate
+import androidx.compose.foundation.layout.PaddingValues
+import com.shohankhan.hisabghor.core.designsystem.AmountText
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgChip
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 enum class ReportPreset { THIS_MONTH, LAST_MONTH, THIS_YEAR, ALL_TIME, CUSTOM }
 
@@ -152,50 +165,41 @@ fun ReportsScreen(onOpenNetWorthItems: () -> Unit) {
         factory = hisabViewModelFactory { ReportsViewModel(container.reportRepository) }
     )
     val state by viewModel.uiState.collectAsState()
+    val presets = listOf(
+        ReportPreset.THIS_MONTH to "এই মাস",
+        ReportPreset.LAST_MONTH to "গত মাস",
+        ReportPreset.THIS_YEAR to "এই বছর",
+        ReportPreset.ALL_TIME to "সব সময়",
+        ReportPreset.CUSTOM to "তারিখ বেছে নিন"
+    )
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "রিপোর্ট") }
+    HgScreen(
+        title = "রিপোর্ট",
+        subtitle = "আয়, খরচ ও সম্পদের হিসাব"
     ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(Space.md)
         ) {
+            Spacer(Modifier.height(Space.sm))
             Row(
                 Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Space.sm)
             ) {
-                FilterChip(
-                    selected = state.preset == ReportPreset.THIS_MONTH,
-                    onClick = { viewModel.setPreset(ReportPreset.THIS_MONTH) },
-                    label = { Text("এই মাস") }
-                )
-                FilterChip(
-                    selected = state.preset == ReportPreset.LAST_MONTH,
-                    onClick = { viewModel.setPreset(ReportPreset.LAST_MONTH) },
-                    label = { Text("গত মাস") }
-                )
-                FilterChip(
-                    selected = state.preset == ReportPreset.THIS_YEAR,
-                    onClick = { viewModel.setPreset(ReportPreset.THIS_YEAR) },
-                    label = { Text("এই বছর") }
-                )
-                FilterChip(
-                    selected = state.preset == ReportPreset.ALL_TIME,
-                    onClick = { viewModel.setPreset(ReportPreset.ALL_TIME) },
-                    label = { Text("সব সময়") }
-                )
-                FilterChip(
-                    selected = state.preset == ReportPreset.CUSTOM,
-                    onClick = { viewModel.setPreset(ReportPreset.CUSTOM) },
-                    label = { Text("তারিখ বেছে নিন") }
-                )
+                presets.forEach { (preset, label) ->
+                    HgChip(
+                        text = label,
+                        selected = state.preset == preset,
+                        onClick = { viewModel.setPreset(preset) }
+                    )
+                }
             }
             if (state.preset == ReportPreset.CUSTOM) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                     Column(Modifier.weight(1f)) {
                         DateField(
                             date = state.customFrom,
@@ -213,154 +217,191 @@ fun ReportsScreen(onOpenNetWorthItems: () -> Unit) {
                 }
             }
 
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("এই সময়ের সারাংশ", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(6.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("মোট আয়")
-                        Text(formatAmount(state.incomePoisha), color = Emerald600)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("মোট খরচ")
-                        Text(formatAmount(state.expensePoisha), color = Danger600)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("হাতে থাকল (আয় − খরচ)", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            formatAmount(state.netPoisha),
-                            color = if (state.netPoisha >= 0) Emerald600 else Danger600,
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                    }
+            HgCard(padding = PaddingValues(Space.lg)) {
+                Eyebrow("এই সময়ের সারাংশ")
+                Spacer(Modifier.height(Space.sm))
+                SummaryRow("মোট আয়", state.incomePoisha, Hg.colors.income)
+                SummaryRow("মোট খরচ", state.expensePoisha, Hg.colors.expense)
+                Spacer(Modifier.height(Space.sm))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
-                        "ট্রান্সফার, সঞ্চয়, ধার ও ঋণের আসল এই হিসাবে আয়/খরচ হিসাবে ধরা হয়নি।",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        "হাতে থাকল",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Hg.colors.ink
+                    )
+                    AmountText(
+                        state.netPoisha,
+                        style = HgAmountType.small,
+                        color = if (state.netPoisha >= 0) Hg.colors.income else Hg.colors.expense
                     )
                 }
+                Spacer(Modifier.height(Space.xs))
+                Text(
+                    "ট্রান্সফার, সঞ্চয়, ধার ও ঋণের আসল এই হিসাবে আয়/খরচ হিসেবে ধরা হয়নি।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary
+                )
             }
 
-            Card(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+            HgCard(padding = PaddingValues(Space.lg)) {
+                Text(
+                    "কোথায় খরচ হলো",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink
+                )
+                Spacer(Modifier.height(Space.sm))
+                if (state.expenseByCategory.isEmpty()) {
                     Text(
-                        "কোথায় খরচ হলো",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.fillMaxWidth()
+                        "এই সময়ে কোনো খরচ নেই।",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Hg.colors.inkSecondary
                     )
-                    Spacer(Modifier.height(8.dp))
-                    if (state.expenseByCategory.isEmpty()) {
-                        Text(
-                            "এই সময়ে কোনো খরচ নেই।",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        CategoryDonutChart(parts = state.expenseByCategory)
-                        Spacer(Modifier.height(8.dp))
-                        CategoryRows(state.expenseByCategory)
-                    }
-                }
-            }
-
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("কোথা থেকে আয় এল", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
-                    if (state.incomeByCategory.isEmpty()) {
-                        Text(
-                            "এই সময়ে কোনো আয় নেই।",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        CategoryRows(state.incomeByCategory)
-                    }
-                }
-            }
-
-            Card(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Row(
+                } else {
+                    Column(
                         Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CategoryDonutChart(parts = state.expenseByCategory)
+                    }
+                    Spacer(Modifier.height(Space.md))
+                    CategoryRows(state.expenseByCategory)
+                }
+            }
+
+            HgCard(padding = PaddingValues(Space.lg)) {
+                Text(
+                    "কোথা থেকে আয় এল",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink
+                )
+                Spacer(Modifier.height(Space.sm))
+                if (state.incomeByCategory.isEmpty()) {
+                    Text(
+                        "এই সময়ে কোনো আয় নেই।",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Hg.colors.inkSecondary
+                    )
+                } else {
+                    CategoryRows(state.incomeByCategory)
+                }
+            }
+
+            HgCard(padding = PaddingValues(Space.lg)) {
+                Text(
+                    "মাস অনুযায়ী আয়-খরচ",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink
+                )
+                Spacer(Modifier.height(Space.sm))
+                HgSegmented(
+                    options = listOf(6, 12),
+                    selected = state.monthsCount,
+                    label = { if (it == 6) "৬ মাস" else "১২ মাস" },
+                    onSelect = { viewModel.setMonthsCount(it) }
+                )
+                Spacer(Modifier.height(Space.md))
+                Column(
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    IncomeExpenseBarChart(data = state.monthly)
+                }
+                ChartLegend()
+                Spacer(Modifier.height(Space.sm))
+                state.monthly.forEach { month ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = Space.xs),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("মাস অনুযায়ী আয়-খরচ", style = MaterialTheme.typography.titleMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FilterChip(
-                                selected = state.monthsCount == 6,
-                                onClick = { viewModel.setMonthsCount(6) },
-                                label = { Text("৬ মাস") }
-                            )
-                            FilterChip(
-                                selected = state.monthsCount == 12,
-                                onClick = { viewModel.setMonthsCount(12) },
-                                label = { Text("১২ মাস") }
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    IncomeExpenseBarChart(data = state.monthly)
-                    ChartLegend()
-                    Spacer(Modifier.height(6.dp))
-                    state.monthly.forEach { month ->
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(month.yearMonthLabel, style = MaterialTheme.typography.bodySmall)
-                            Text(
-                                "আয় ${formatAmount(month.incomePoisha)} • খরচ ${formatAmount(month.expensePoisha)} • হাতে ${formatAmount(month.netPoisha)}",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
+                        Text(
+                            month.yearMonthLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkSecondary
+                        )
+                        Text(
+                            "আয় ${formatAmount(month.incomePoisha)} • খরচ ${formatAmount(month.expensePoisha)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.ink
+                        )
                     }
                 }
             }
 
             state.netWorth?.let { netWorth ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("নেট সম্পদ", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            formatAmount(netWorth.netWorthPoisha),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = if (netWorth.netWorthPoisha >= 0) Emerald600 else Danger600
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        KvRow("সব অ্যাকাউন্টের ব্যালান্স", formatAmount(netWorth.accountsPoisha))
-                        KvRow("অন্যদের কাছে পাওনা", formatAmount(netWorth.receivablesPoisha))
-                        KvRow("অতিরিক্ত সম্পদ (জমি/সোনা)", formatAmount(netWorth.manualAssetsPoisha))
-                        KvRow("মোট সম্পদ", formatAmount(netWorth.totalAssets))
-                        KvRow("ঋণ ও ধার বাকি", formatAmount(netWorth.loansPoisha))
-                        KvRow("দোকানের বাকি", formatAmount(netWorth.shopDuesPoisha))
-                        KvRow("অতিরিক্ত দায়", formatAmount(netWorth.manualLiabilitiesPoisha))
-                        KvRow("মোট দায়", formatAmount(netWorth.totalLiabilities))
-                        Spacer(Modifier.height(6.dp))
-                        KvRow("হাতে নগদ", formatAmount(state.cashPoisha))
-                        KvRow("ব্যাংক ও মোবাইল ব্যাংকিং", formatAmount(state.bankMfsPoisha))
-                        KvRow("সঞ্চয় অ্যাকাউন্টে", formatAmount(state.savingsPoisha))
-                        Text(
-                            "সঞ্চয়ের টাকা অ্যাকাউন্ট ব্যালান্সের মধ্যেই আছে — দুবার গণনা হয়নি।",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedButton(onClick = onOpenNetWorthItems) {
-                            Text("অতিরিক্ত সম্পদ ও দায় সাজান")
-                        }
-                    }
+                HgCard(padding = PaddingValues(Space.lg)) {
+                    Eyebrow("নেট সম্পদ")
+                    Spacer(Modifier.height(Space.xs))
+                    AmountText(
+                        netWorth.netWorthPoisha,
+                        style = HgAmountType.large,
+                        color = if (netWorth.netWorthPoisha >= 0) Hg.colors.income else Hg.colors.expense
+                    )
+                    Spacer(Modifier.height(Space.md))
+                    NetWorthLine("সব অ্যাকাউন্টের ব্যালান্স", netWorth.accountsPoisha)
+                    NetWorthLine("অন্যদের কাছে পাওনা", netWorth.receivablesPoisha)
+                    NetWorthLine("অতিরিক্ত সম্পদ (জমি/সোনা)", netWorth.manualAssetsPoisha)
+                    NetWorthLine("মোট সম্পদ", netWorth.totalAssets, strong = true)
+                    NetWorthLine("ঋণ ও ধার বাকি", netWorth.loansPoisha)
+                    NetWorthLine("দোকানের বাকি", netWorth.shopDuesPoisha)
+                    NetWorthLine("অতিরিক্ত দায়", netWorth.manualLiabilitiesPoisha)
+                    NetWorthLine("মোট দায়", netWorth.totalLiabilities, strong = true)
+                    Spacer(Modifier.height(Space.sm))
+                    Eyebrow("নগদ অবস্থান")
+                    Spacer(Modifier.height(Space.xs))
+                    NetWorthLine("হাতে নগদ", state.cashPoisha)
+                    NetWorthLine("ব্যাংক ও মোবাইল ব্যাংকিং", state.bankMfsPoisha)
+                    NetWorthLine("সঞ্চয় অ্যাকাউন্টে", state.savingsPoisha)
+                    Spacer(Modifier.height(Space.sm))
+                    Text(
+                        "সঞ্চয়ের টাকা অ্যাকাউন্ট ব্যালান্সের মধ্যেই আছে — দুবার গণনা হয়নি।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                    Spacer(Modifier.height(Space.md))
+                    HgButton(
+                        text = "অতিরিক্ত সম্পদ ও দায় সাজান",
+                        onClick = onOpenNetWorthItems,
+                        style = HgButtonStyle.Secondary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Space.xxl))
         }
+    }
+}
+
+@Composable
+private fun SummaryRow(label: String, poisha: Long, color: androidx.compose.ui.graphics.Color) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = Space.xs),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = Hg.colors.inkSecondary)
+        AmountText(poisha, style = HgAmountType.small, color = color)
+    }
+}
+
+@Composable
+private fun NetWorthLine(label: String, poisha: Long, strong: Boolean = false) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = Space.xs),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            style = if (strong) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+            color = if (strong) Hg.colors.ink else Hg.colors.inkSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        AmountText(
+            poisha,
+            style = if (strong) HgAmountType.small else HgAmountType.small,
+            color = Hg.colors.ink
+        )
     }
 }
 
@@ -370,24 +411,29 @@ private fun CategoryRows(totals: List<CategoryTotal>) {
     Column(Modifier.fillMaxWidth()) {
         totals.forEach { item ->
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                Modifier.fillMaxWidth().padding(vertical = Space.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Canvas(Modifier.size(12.dp)) { drawCircle(colorFromHex(item.colorHex)) }
+                Canvas(Modifier.size(10.dp)) { drawCircle(colorFromHex(item.colorHex)) }
                 Text(
                     item.categoryName,
-                    modifier = Modifier.weight(1f).padding(start = 10.dp),
-                    style = MaterialTheme.typography.bodyMedium
+                    modifier = Modifier.weight(1f).padding(start = Space.sm),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Hg.colors.ink
                 )
                 val percent = if (total > 0)
                     (kotlin.math.abs(item.totalPoisha) * 10000 / total).toInt() else 0
                 Text(
                     BengaliNumber.formatPercentBp(percent),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 10.dp)
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Hg.colors.inkTertiary,
+                    modifier = Modifier.padding(end = Space.sm)
                 )
-                Text(formatAmount(item.totalPoisha), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    formatAmount(item.totalPoisha),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Hg.colors.ink
+                )
             }
         }
     }

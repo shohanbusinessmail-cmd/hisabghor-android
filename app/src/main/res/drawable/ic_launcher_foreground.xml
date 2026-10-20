@@ -1,31 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  HisabGhor launcher foreground (original vector artwork):
-  a white house silhouette holding an emerald coin with ledger lines —
-  "home + money ledger" in one mark. Drawn inside the 108x108 adaptive
-  icon canvas, content kept within the central safe zone.
+  HisabGhor launcher foreground — "হ" monogram.
+  A geometric Bengali "হ": the matra (top bar) and stem join a coin-shaped
+  bowl, with the tail sweeping out like a ledger page turning. Drawn in
+  white inside the 108x108 adaptive canvas and kept inside the 72x72
+  safe zone, so it survives every launcher mask (circle, squircle, teardrop).
+  The mark is legible down to 24 px and works on light and dark backdrops.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- House silhouette -->
+    <!-- Matra (top bar) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,24 L88,52 L80,52 L80,84 L28,84 L28,52 L20,52 Z" />
-    <!-- Coin -->
+        android:pathData="M28,35 H80"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- Stem joining the bar to the bowl -->
     <path
-        android:fillColor="#0B7A4B"
-        android:pathData="M54,53 m-11,0 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0" />
-    <!-- Ledger lines inside the coin -->
+        android:pathData="M54,35 V45"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- Coin-shaped bowl -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M47,58.4 h14 v2.6 h-14 z" />
+        android:pathData="M54,46 A15,15 0 1,1 54,76 A15,15 0 1,1 54,46"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- Sweeping tail -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M47,64.2 h14 v2.6 h-14 z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M47,70 h9.5 v2.6 h-9.5 z" />
+        android:pathData="M40,72 C36,77 31,80 26,81"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="8.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
 </vector>

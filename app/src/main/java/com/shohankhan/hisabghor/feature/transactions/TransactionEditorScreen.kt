@@ -59,6 +59,40 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import com.shohankhan.hisabghor.core.designsystem.AmountText
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.FormSectionLabel
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
+import com.shohankhan.hisabghor.core.designsystem.Stroke
 
 enum class EditorKind(val label: String) {
     INCOME("আয়"), EXPENSE("খরচ"), REFUND("রিফান্ড")
@@ -284,6 +318,8 @@ class TransactionEditorViewModel(
     }
 }
 
+
+
 @Composable
 fun TransactionEditorScreen(
     kindArg: String,
@@ -309,223 +345,322 @@ fun TransactionEditorScreen(
         }
     )
     val state by viewModel.state.collectAsState()
-
     LaunchedEffect(state.saved) {
         if (state.saved) onSaved()
     }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (state.isEdit) "লেনদেন সম্পাদনা" else "নতুন লেনদেন",
-                onBack = onBack
-            )
+    val itemsTotal = state.itemsTotalPoisha
+    val amountPreview = itemsTotal ?: BengaliNumber.parsePoisha(state.amountText)
+    HgScreen(
+        title = if (state.isEdit) "লেনদেন সম্পাদনা" else {
+            when (state.editorKind) {
+                EditorKind.INCOME -> "আয় যোগ করুন"
+                EditorKind.EXPENSE -> "খরচ যোগ করুন"
+                EditorKind.REFUND -> "রিফান্ড যোগ করুন"
+            }
+        },
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                Column(Modifier.weight(1f)) {
+                    Eyebrow("সংরক্ষণ হবে")
+                    Text(
+                        amountPreview?.let { formatAmount(it) } ?: "৳০",
+                        style = HgAmountType.medium,
+                        color = Hg.colors.ink
+                    )
+                }
+                HgButton(
+                    text = if (state.saving) "সংরক্ষণ হচ্ছে…" else "সংরক্ষণ করুন",
+                    onClick = viewModel::save,
+                    enabled = !state.saving,
+                    modifier = Modifier.weight(1.2f)
+                )
+            }
         }
     ) { padding ->
         if (state.loading) {
             LoadingState(Modifier.padding(padding))
-            return@Scaffold
+            return@HgScreen
         }
-        Column(
+        androidx.compose.foundation.layout.Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = ScreenPadding)
         ) {
+            Spacer(Modifier.height(Space.md))
             if (!state.isEdit) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    EditorKind.entries.forEach { kind ->
-                        FilterChip(
-                            selected = state.editorKind == kind,
-                            onClick = { viewModel.setKind(kind) },
-                            label = { Text(kind.label) }
-                        )
-                    }
-                }
+                HgSegmented(
+                    options = EditorKind.entries,
+                    selected = state.editorKind,
+                    label = { it.label },
+                    onSelect = viewModel::setKind
+                )
+                Spacer(Modifier.height(Space.lg))
             }
-
             if (state.items.isEmpty()) {
-                MoneyInputField(
+                HgAmountInput(
                     value = state.amountText,
                     onValueChange = viewModel::setAmount,
-                    label = "পরিমাণ (টাকা)",
                     error = state.errors["amount"]
                 )
+                Spacer(Modifier.height(Space.sm))
+                QuickAmounts(onAdd = { delta ->
+                    val current = BengaliNumber.parsePoisha(state.amountText) ?: 0L
+                    viewModel.setAmount(poishaToInputText(current + delta))
+                })
             }
-
-            OutlinedTextField(
+            Spacer(Modifier.height(Space.lg))
+            HgTextField(
                 value = state.title,
                 onValueChange = viewModel::setTitle,
-                label = { Text("শিরোনাম") },
-                placeholder = { Text("যেমন: মাসের বাজার") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                label = "শিরোনাম",
+                placeholder = "যেমন: মাসের বাজার",
+                helper = "খালি রাখলে ক্যাটাগরির নাম ব্যবহার হবে"
             )
-
+            Spacer(Modifier.height(Space.md))
+            FormSectionLabel("ক্যাটাগরি")
+            CategoryChipGrid(
+                categories = state.categories,
+                selectedId = state.categoryId,
+                onSelect = viewModel::setCategory
+            )
+            state.errors["category"]?.let {
+                Text(it, color = Hg.colors.expense, style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.height(Space.md))
             SelectionField(
-                label = if (state.editorKind == EditorKind.INCOME) "যে অ্যাকাউন্টে টাকা এসেছে" else "যে অ্যাকাউন্ট থেকে গেছে",
+                label = when (state.editorKind) {
+                    EditorKind.INCOME -> "যে অ্যাকাউন্টে টাকা এসেছে"
+                    EditorKind.REFUND -> "যে অ্যাকাউন্টে টাকা ফিরেছে"
+                    EditorKind.EXPENSE -> "যে অ্যাকাউন্ট থেকে টাকা গেছে"
+                },
                 selectedText = state.accounts.firstOrNull { it.id == state.accountId }?.name ?: "বেছে নিন",
                 options = state.accounts,
                 optionLabel = { it.name },
                 onSelect = { viewModel.setAccount(it.id) },
                 error = state.errors["account"]
             )
-
-            SelectionField(
-                label = "ক্যাটাগরি",
-                selectedText = state.categories.firstOrNull { it.id == state.categoryId }?.name ?: "বেছে নিন",
-                options = state.categories,
-                optionLabel = { it.name },
-                onSelect = { viewModel.setCategory(it.id) },
-                error = state.errors["category"]
-            )
-
+            Spacer(Modifier.height(Space.md))
             DateField(
                 date = state.date,
                 onDateChange = viewModel::setDate,
                 label = "তারিখ"
             )
-
             if (state.editorKind == EditorKind.EXPENSE) {
+                Spacer(Modifier.height(Space.lg))
                 ItemsSection(state, viewModel)
-                if (state.items.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        MoneyInputField(
-                            value = state.extraChargeText,
-                            onValueChange = viewModel::setExtraCharge,
-                            label = "অতিরিক্ত চার্জ/ভ্যাট",
-                            modifier = Modifier.weight(1f)
-                        )
-                        MoneyInputField(
-                            value = state.discountText,
-                            onValueChange = viewModel::setDiscount,
-                            label = "মোট ছাড়",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    state.itemsTotalPoisha?.let { total ->
-                        Card(Modifier.fillMaxWidth()) {
-                            Row(
-                                Modifier.fillMaxWidth().padding(14.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("মোট খরচ", style = MaterialTheme.typography.titleMedium)
-                                Text(formatAmount(total), style = MaterialTheme.typography.titleMedium)
-                            }
-                        }
-                    }
-                }
-                state.errors["items"]?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
             }
-
-            OutlinedTextField(
+            Spacer(Modifier.height(Space.lg))
+            HgTextField(
                 value = state.note,
                 onValueChange = viewModel::setNote,
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth(),
+                label = "মন্তব্য (ঐচ্ছিক)",
+                singleLine = false,
                 minLines = 2
             )
-
             state.errors["save"]?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(Space.md))
+                com.shohankhan.hisabghor.core.designsystem.HgNotice(
+                    title = it,
+                    tone = com.shohankhan.hisabghor.core.designsystem.HgTone.Expense
+                )
             }
-
-            Button(
-                onClick = viewModel::save,
-                enabled = !state.saving,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (state.saving) "সংরক্ষণ হচ্ছে…" else "সংরক্ষণ করুন")
-            }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Space.xxl))
         }
     }
 }
-
 @Composable
-private fun ItemsSection(state: TransactionEditorUiState, viewModel: TransactionEditorViewModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("পণ্যের তালিকা (ঐচ্ছিক)", style = MaterialTheme.typography.titleSmall)
-            OutlinedButton(onClick = viewModel::addItem) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Text("পণ্য যোগ")
+private fun QuickAmounts(onAdd: (Long) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+        listOf(100L, 500L, 1000L, 5000L).forEach { taka ->
+            Box(
+                Modifier
+                    .clip(Radius.chip)
+                    .background(Hg.colors.surfaceMuted)
+                    .clickable { onAdd(taka * 100) }
+                    .padding(horizontal = Space.md, vertical = Space.xs)
+            ) {
+                Text(
+                    "+${BengaliNumber.formatPoisha(taka * 100, withSymbol = false)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Hg.colors.inkSecondary
+                )
             }
         }
-        state.items.forEach { item ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+    }
+}
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun CategoryChipGrid(
+    categories: List<CategoryEntity>,
+    selectedId: Long?,
+    onSelect: (Long) -> Unit
+) {
+    androidx.compose.foundation.layout.FlowRow(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Space.sm),
+        verticalArrangement = Arrangement.spacedBy(Space.sm)
+    ) {
+        categories.forEach { category ->
+            val selected = category.id == selectedId
+            Box(
+                Modifier
+                    .clip(Radius.chip)
+                    .background(if (selected) Hg.colors.brandTint else Hg.colors.surface)
+                    .border(
+                        Stroke.hairline,
+                        if (selected) Hg.colors.brand else Hg.colors.hairlineStrong,
+                        Radius.chip
+                    )
+                    .clickable { onSelect(category.id) }
+                    .padding(horizontal = Space.md, vertical = Space.sm)
+            ) {
+                Text(
+                    category.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (selected) Hg.colors.onBrandTint else Hg.colors.inkSecondary
+                )
+            }
+        }
+    }
+    if (categories.isEmpty()) {
+        Text(
+            "কোনো ক্যাটাগরি নেই — ‘আরও’ থেকে ক্যাটাগরি যোগ করুন।",
+            style = MaterialTheme.typography.bodySmall,
+            color = Hg.colors.inkSecondary
+        )
+    }
+}
+@Composable
+private fun ItemsSection(state: TransactionEditorUiState, viewModel: TransactionEditorViewModel) {
+    var expanded by remember { mutableStateOf(state.items.isNotEmpty()) }
+    HgCard(padding = PaddingValues(Space.lg)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "পণ্যের তালিকা",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Hg.colors.ink
+                )
+                Text(
+                    if (state.items.isEmpty()) "ঐচ্ছিক — বাজার বা বিল ভাগ করে লিখুন"
+                    else "${state.items.size}টি পণ্য যোগ করা হয়েছে",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary
+                )
+            }
+            TextButton(onClick = {
+                expanded = true
+                viewModel.addItem()
+            }) {
+                Text("যোগ করুন", color = Hg.colors.brand)
+            }
+        }
+        if (expanded && state.items.isNotEmpty()) {
+            Spacer(Modifier.height(Space.sm))
+            state.items.forEach { item ->
+                HgItemEditor(item, viewModel)
+                Spacer(Modifier.height(Space.sm))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                MoneyInputField(
+                    value = state.extraChargeText,
+                    onValueChange = viewModel::setExtraCharge,
+                    label = "অতিরিক্ত চার্জ",
+                    modifier = Modifier.weight(1f)
+                )
+                MoneyInputField(
+                    value = state.discountText,
+                    onValueChange = viewModel::setDiscount,
+                    label = "মোট ছাড়",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            state.itemsTotalPoisha?.let { total ->
+                Spacer(Modifier.height(Space.sm))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(Radius.mdShape)
+                        .background(Hg.colors.surfaceMuted)
+                        .padding(Space.md),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        OutlinedTextField(
-                            value = item.name,
-                            onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(name = v) } },
-                            label = { Text("পণ্যের নাম") },
-                            placeholder = { Text("যেমন: চাল") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { viewModel.removeItem(item.key) }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "পণ্য সরান")
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = item.quantity,
-                            onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(quantity = v) } },
-                            label = { Text("পরিমাণ") },
-                            placeholder = { Text("১") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = item.unit,
-                            onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(unit = v) } },
-                            label = { Text("একক") },
-                            placeholder = { Text("কেজি/টি") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MoneyInputField(
-                            value = item.unitPrice,
-                            onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(unitPrice = v) } },
-                            label = "একক দাম",
-                            modifier = Modifier.weight(1f)
-                        )
-                        MoneyInputField(
-                            value = item.discount,
-                            onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(discount = v) } },
-                            label = "ছাড়",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    item.toDraft()?.let { draft ->
-                        Text(
-                            "লাইন মোট: ${formatAmount(draft.lineTotalPoisha)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text("মোট খরচ", style = MaterialTheme.typography.titleSmall, color = Hg.colors.ink)
+                    Text(formatAmount(total), style = HgAmountType.medium, color = Hg.colors.ink)
                 }
             }
         }
-        if (state.items.isEmpty()) {
+        state.errors["items"]?.let {
+            Spacer(Modifier.height(Space.sm))
+            Text(it, color = Hg.colors.expense, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+@Composable
+private fun HgItemEditor(item: ItemUiState, viewModel: TransactionEditorViewModel) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Radius.mdShape)
+            .background(Hg.colors.surfaceMuted)
+            .padding(Space.md),
+        verticalArrangement = Arrangement.spacedBy(Space.sm)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            HgTextField(
+                value = item.name,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(name = v) } },
+                label = "পণ্যের নাম",
+                placeholder = "যেমন: চাল",
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = { viewModel.removeItem(item.key) }) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "পণ্য সরান",
+                    tint = Hg.colors.inkSecondary
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            HgTextField(
+                value = item.quantity,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(quantity = v) } },
+                label = "পরিমাণ",
+                placeholder = "১",
+                keyboardType = KeyboardType.Decimal,
+                modifier = Modifier.weight(1f)
+            )
+            HgTextField(
+                value = item.unit,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(unit = v) } },
+                label = "একক",
+                placeholder = "কেজি",
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            MoneyInputField(
+                value = item.unitPrice,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(unitPrice = v) } },
+                label = "একক দাম",
+                modifier = Modifier.weight(1f)
+            )
+            MoneyInputField(
+                value = item.discount,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(discount = v) } },
+                label = "ছাড়",
+                modifier = Modifier.weight(1f)
+            )
+        }
+        item.toDraft()?.let { draft ->
             Text(
-                "পণ্য যোগ করলে মোট খরচ পণ্যের যোগফল থেকে হিসাব হবে।",
+                "লাইন মোট ${formatAmount(draft.lineTotalPoisha)}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Hg.colors.inkSecondary
             )
         }
     }

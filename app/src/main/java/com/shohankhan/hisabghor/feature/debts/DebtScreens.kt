@@ -68,6 +68,25 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ExtendedFloatingActionButton
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 // ---------------- people list ----------------
 
@@ -89,89 +108,352 @@ fun DebtListScreen(
     val totalReceivable = summaries.sumOf { it.receivablePoisha }
     val totalPayable = summaries.sumOf { it.payablePoisha }
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "ধার ও পাওনা") },
+    HgScreen(
+        title = "ধার ও পাওনা",
+        subtitle = "ব্যক্তিভিত্তিক হিসাব",
+        insetBottom = false,
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddPerson) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন ব্যক্তি যোগ করুন")
+            ExtendedFloatingActionButton(
+                onClick = onAddPerson,
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন ব্যক্তি", style = MaterialTheme.typography.labelLarge) }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.md),
+                    padding = PaddingValues(Space.lg)
+                ) {
+                    Row(Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Eyebrow("আমি পাব")
+                            Spacer(Modifier.height(Space.xs))
+                            AmountText(totalReceivable, style = HgAmountType.medium, color = Hg.colors.income)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Eyebrow("আমি দেব")
+                            Spacer(Modifier.height(Space.xs))
+                            AmountText(totalPayable, style = HgAmountType.medium, color = Hg.colors.expense)
+                        }
+                    }
+                    Spacer(Modifier.height(Space.sm))
+                    Text(
+                        "ধার দেওয়া টাকা খরচ নয়, ধার নেওয়া টাকা আয় নয় — শুধু পাওনা ও দেনা।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                }
+            }
+            item {
+                Text(
+                    "ব্যক্তি",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink,
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)
+                )
+            }
+            if (summaries.isEmpty()) {
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.Handshake,
+                        title = "কেউ যোগ হয়নি",
+                        subtitle = "যাকে ধার দেন বা যার কাছ থেকে ধার নেন, তাকে যোগ করে চুক্তি তৈরি করুন।",
+                        actionLabel = "ব্যক্তি যোগ করুন",
+                        onAction = onAddPerson
+                    )
+                }
+            } else {
+                item {
+                    HgCard(
+                        Modifier.padding(horizontal = ScreenPadding),
+                        padding = PaddingValues(vertical = Space.xs)
+                    ) {
+                        summaries.forEachIndexed { index, summary ->
+                            HgListRow(
+                                title = summary.party.name,
+                                subtitle = "চলমান চুক্তি ${BengaliNumber.formatCount(summary.activeAgreements.toLong())}টি",
+                                leading = { IconChip(Icons.Filled.Person) },
+                                trailing = {
+                                    when {
+                                        summary.netPoisha > 0 -> Column(horizontalAlignment = Alignment.End) {
+                                            Text("পাওনা", style = MaterialTheme.typography.labelSmall, color = Hg.colors.inkTertiary)
+                                            AmountText(summary.netPoisha, style = HgAmountType.small, color = Hg.colors.income)
+                                        }
+                                        summary.netPoisha < 0 -> Column(horizontalAlignment = Alignment.End) {
+                                            Text("দেনা", style = MaterialTheme.typography.labelSmall, color = Hg.colors.inkTertiary)
+                                            AmountText(-summary.netPoisha, style = HgAmountType.small, color = Hg.colors.expense)
+                                        }
+                                        else -> Text(
+                                            "হিসাব পরিষ্কার",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Hg.colors.inkSecondary
+                                        )
+                                    }
+                                },
+                                onClick = { onOpenPerson(summary.party.id) }
+                            )
+                            if (index != summaries.lastIndex) HgDivider(startInset = 68)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PersonEditorScreen(
+    editId: Long,
+    onBack: () -> Unit,
+    onSaved: () -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: PersonEditorViewModel = viewModel(
+        key = "person_editor_$editId",
+        factory = hisabViewModelFactory { PersonEditorViewModel(editId, container.partyRepository) }
+    )
+    val state by viewModel.state.collectAsState()
+    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+
+    HgScreen(
+        title = if (state.isEdit) "ব্যক্তি সম্পাদনা" else "নতুন ব্যক্তি",
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = "সংরক্ষণ করুন",
+                    onClick = viewModel::save,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("মোট পাওনা", style = MaterialTheme.typography.bodyMedium)
-                        AmountText(totalReceivable, style = MaterialTheme.typography.titleLarge, color = Emerald600)
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = ScreenPadding)
+        ) {
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.name,
+                onValueChange = { v -> viewModel.update { it.copy(name = v) } },
+                label = "নাম"
+            )
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.phone,
+                onValueChange = { v -> viewModel.update { it.copy(phone = v) } },
+                label = "মোবাইল (ঐচ্ছিক)",
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+            )
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.address,
+                onValueChange = { v -> viewModel.update { it.copy(address = v) } },
+                label = "ঠিকানা (ঐচ্ছিক)"
+            )
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.note,
+                onValueChange = { v -> viewModel.update { it.copy(note = v) } },
+                label = "মন্তব্য (ঐচ্ছিক)"
+            )
+            state.error?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
+            }
+            if (state.isEdit) {
+                Spacer(Modifier.height(Space.lg))
+                HgButton(
+                    text = if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "আর্কাইভ করুন",
+                    onClick = { viewModel.setArchived(!state.archived) },
+                    style = HgButtonStyle.Secondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Spacer(Modifier.height(Space.xxl))
+        }
+    }
+}
+
+@Composable
+fun PersonDetailScreen(
+    personId: Long,
+    onBack: () -> Unit,
+    onEditPerson: (Long) -> Unit,
+    onNewAgreement: (personId: Long, kind: String) -> Unit,
+    onOpenAgreement: (Long) -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: PersonDetailViewModel = viewModel(
+        key = "person_detail_$personId",
+        factory = hisabViewModelFactory {
+            PersonDetailViewModel(
+                personId, container.partyRepository,
+                container.database, container.loanRepository
+            )
+        }
+    )
+    val state by viewModel.uiState.collectAsState()
+    val party = state.party
+    val receivable = state.agreements.filter { it.loan.kind == LoanKind.PERSONAL_LEND }
+        .sumOf { it.outstandingPoisha }
+    val payable = state.agreements.filter { it.loan.kind != LoanKind.PERSONAL_LEND }
+        .sumOf { it.outstandingPoisha }
+
+    HgScreen(
+        title = party?.name ?: "ব্যক্তি",
+        subtitle = "ধার ও চুক্তির হিসাব",
+        onBack = onBack,
+        actions = {
+            IconButton(onClick = { onEditPerson(personId) }) {
+                Icon(Icons.Filled.Edit, contentDescription = "সম্পাদনা করুন", tint = Hg.colors.ink)
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = Space.xxl)
+        ) {
+            item {
+                Column(Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)) {
+                    Eyebrow("এই ব্যক্তির সঙ্গে")
+                    Spacer(Modifier.height(Space.xs))
+                    Row(Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text("পাওনা", style = MaterialTheme.typography.bodySmall, color = Hg.colors.inkSecondary)
+                            AmountText(receivable, style = HgAmountType.medium, color = Hg.colors.income)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("দেনা", style = MaterialTheme.typography.bodySmall, color = Hg.colors.inkSecondary)
+                            AmountText(payable, style = HgAmountType.medium, color = Hg.colors.expense)
+                        }
                     }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("মোট দেনা", style = MaterialTheme.typography.bodyMedium)
-                        AmountText(totalPayable, style = MaterialTheme.typography.titleLarge, color = Danger600)
+                    Spacer(Modifier.height(Space.md))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        HgButton(
+                            text = "ধার দিলাম",
+                            onClick = { onNewAgreement(personId, "PERSONAL_LEND") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        HgButton(
+                            text = "ধার নিলাম",
+                            onClick = { onNewAgreement(personId, "PERSONAL_BORROW") },
+                            style = HgButtonStyle.Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
-            if (summaries.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.Handshake,
-                    title = "কেউ যোগ হয়নি",
-                    subtitle = "যাকে ধার দেন বা যার কাছ থেকে ধার নেন, তাকে যোগ করে চুক্তি তৈরি করুন।",
-                    actionLabel = "ব্যক্তি যোগ করুন",
-                    onAction = onAddPerson
-                )
-            } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(summaries, key = { it.party.id }) { summary ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenPerson(summary.party.id) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Filled.Person,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                                Text(
-                                    summary.party.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    "চলমান চুক্তি: ${BengaliNumber.formatCount(summary.activeAgreements.toLong())}টি",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                when {
-                                    summary.netPoisha > 0 -> {
-                                        Text("পাওনা", style = MaterialTheme.typography.bodySmall)
-                                        AmountText(summary.netPoisha, color = Emerald600)
-                                    }
-                                    summary.netPoisha < 0 -> {
-                                        Text("দেনা", style = MaterialTheme.typography.bodySmall)
-                                        AmountText(-summary.netPoisha, color = Danger600)
-                                    }
-                                    else -> Text(
-                                        "হিসাব পরিষ্কার",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                        HorizontalDivider(Modifier.padding(start = 52.dp))
+            if (party?.phone != null || party?.address != null || party?.note != null) {
+                item {
+                    HgCard(
+                        Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm),
+                        padding = PaddingValues(vertical = Space.xs)
+                    ) {
+                        party?.phone?.let { PersonLine("মোবাইল", BengaliNumber.toBengaliDigits(it)) }
+                        party?.address?.let { PersonLine("ঠিকানা", it) }
+                        party?.note?.takeIf { it.isNotBlank() }?.let { PersonLine("মন্তব্য", it) }
                     }
+                }
+            }
+            item {
+                Text(
+                    "চুক্তিসমূহ",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink,
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)
+                )
+            }
+            if (state.agreements.isEmpty()) {
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.Handshake,
+                        title = "কোনো চুক্তি নেই",
+                        subtitle = "ওপরের বোতাম দিয়ে ধার দেওয়া বা নেওয়ার চুক্তি তৈরি করুন।"
+                    )
+                }
+            }
+            items(state.agreements, key = { it.loan.id }) { agreement ->
+                val loan = agreement.loan
+                val isLend = loan.kind == LoanKind.PERSONAL_LEND
+                val overdue = loan.dueDate != null && loan.dueDate < Dates.startOfDayMs(Dates.nowMs()) &&
+                    agreement.outstandingPoisha > 0 && loan.status == LoanStatus.ACTIVE
+                Column(Modifier.padding(horizontal = ScreenPadding)) {
+                    HgListRow(
+                        title = loan.kind.bnLabel() +
+                            if (loan.status == LoanStatus.CLOSED) " (পরিশোধিত)" else "",
+                        subtitle = "${Dates.formatShortDate(loan.startDate)} • আসল ${formatAmount(loan.principalPoisha)}" +
+                            (loan.dueDate?.let { " • মেয়াদ ${Dates.formatShortDate(it)}" } ?: "") +
+                            if (overdue) " • মেয়াদ শেষ" else "",
+                        leading = {
+                            IconChip(
+                                Icons.Filled.Handshake,
+                                tint = if (isLend) Hg.colors.income else Hg.colors.expense,
+                                background = if (isLend) Hg.colors.incomeTint else Hg.colors.expenseTint
+                            )
+                        },
+                        trailing = {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    if (isLend) "পাওনা বাকি" else "দেনা বাকি",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Hg.colors.inkTertiary
+                                )
+                                AmountText(
+                                    agreement.outstandingPoisha,
+                                    style = HgAmountType.small,
+                                    color = if (isLend) Hg.colors.income else Hg.colors.expense
+                                )
+                            }
+                        },
+                        onClick = { onOpenAgreement(loan.id) }
+                    )
+                    HgDivider(startInset = 52)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PersonLine(label: String, value: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Space.lg, vertical = Space.sm)
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.inkSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.ink,
+            modifier = Modifier.weight(1.4f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
     }
 }
 
@@ -260,83 +542,6 @@ class PersonEditorViewModel(
     }
 }
 
-@Composable
-fun PersonEditorScreen(
-    editId: Long,
-    onBack: () -> Unit,
-    onSaved: () -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: PersonEditorViewModel = viewModel(
-        key = "person_editor_$editId",
-        factory = hisabViewModelFactory { PersonEditorViewModel(editId, container.partyRepository) }
-    )
-    val state by viewModel.state.collectAsState()
-    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (state.isEdit) "ব্যক্তি সম্পাদনা" else "নতুন ব্যক্তি",
-                onBack = onBack
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedTextField(
-                value = state.name,
-                onValueChange = { v -> viewModel.update { it.copy(name = v) } },
-                label = { Text("নাম") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.phone,
-                onValueChange = { v -> viewModel.update { it.copy(phone = v) } },
-                label = { Text("মোবাইল (ঐচ্ছিক)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.address,
-                onValueChange = { v -> viewModel.update { it.copy(address = v) } },
-                label = { Text("ঠিকানা (ঐচ্ছিক)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = { v -> viewModel.update { it.copy(note = v) } },
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                Text("সংরক্ষণ করুন")
-            }
-            if (state.isEdit) {
-                OutlinedButton(
-                    onClick = { viewModel.setArchived(!state.archived) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "আর্কাইভ করুন")
-                }
-            }
-        }
-    }
-}
-
 // ---------------- person detail ----------------
 
 data class PersonDetailUiState(
@@ -366,118 +571,3 @@ class PersonDetailViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PersonDetailUiState())
 }
 
-@Composable
-fun PersonDetailScreen(
-    personId: Long,
-    onBack: () -> Unit,
-    onEditPerson: (Long) -> Unit,
-    onNewAgreement: (personId: Long, kind: String) -> Unit,
-    onOpenAgreement: (Long) -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: PersonDetailViewModel = viewModel(
-        key = "person_detail_$personId",
-        factory = hisabViewModelFactory {
-            PersonDetailViewModel(
-                personId, container.partyRepository,
-                container.database, container.loanRepository
-            )
-        }
-    )
-    val state by viewModel.uiState.collectAsState()
-    val party = state.party
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = party?.name ?: "ব্যক্তি",
-                onBack = onBack,
-                actions = {
-                    IconButton(onClick = { onEditPerson(personId) }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "সম্পাদনা করুন")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-            item {
-                Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Column(Modifier.padding(16.dp)) {
-                        party?.phone?.let { KvRow("মোবাইল", BengaliNumber.toBengaliDigits(it)) }
-                        party?.address?.let { KvRow("ঠিকানা", it) }
-                        party?.note?.let { KvRow("মন্তব্য", it) }
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Button(
-                                onClick = { onNewAgreement(personId, "PERSONAL_LEND") },
-                                modifier = Modifier.weight(1f)
-                            ) { Text("ধার দিলাম") }
-                            OutlinedButton(
-                                onClick = { onNewAgreement(personId, "PERSONAL_BORROW") },
-                                modifier = Modifier.weight(1f)
-                            ) { Text("ধার নিলাম") }
-                        }
-                    }
-                }
-                Text(
-                    "চুক্তিসমূহ",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-            if (state.agreements.isEmpty()) {
-                item {
-                    EmptyState(
-                        icon = Icons.Filled.Handshake,
-                        title = "কোনো চুক্তি নেই",
-                        subtitle = "ওপরের বোতাম দিয়ে ধার দেওয়া/নেওয়ার চুক্তি তৈরি করুন।"
-                    )
-                }
-            }
-            items(state.agreements, key = { it.loan.id }) { agreement ->
-                val loan = agreement.loan
-                val isLend = loan.kind == LoanKind.PERSONAL_LEND
-                val overdue = loan.dueDate != null && loan.dueDate < Dates.startOfDayMs(Dates.nowMs()) &&
-                    agreement.outstandingPoisha > 0 && loan.status == LoanStatus.ACTIVE
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenAgreement(loan.id) }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            loan.kind.bnLabel() +
-                                if (loan.status == LoanStatus.CLOSED) " (পরিশোধিত)" else "",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            "${Dates.formatShortDate(loan.startDate)} • আসল ${formatAmount(loan.principalPoisha)}" +
-                                (loan.dueDate?.let { " • মেয়াদ ${Dates.formatShortDate(it)}" } ?: "") +
-                                if (overdue) " • মেয়াদ শেষ!" else "",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (overdue) Danger600 else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            if (isLend) "পাওনা বাকি" else "দেনা বাকি",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        AmountText(
-                            agreement.outstandingPoisha,
-                            color = if (isLend) Emerald600 else Danger600
-                        )
-                    }
-                }
-                HorizontalDivider(Modifier.padding(start = 16.dp))
-            }
-        }
-    }
-}

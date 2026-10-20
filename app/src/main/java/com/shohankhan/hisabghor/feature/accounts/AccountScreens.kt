@@ -78,6 +78,38 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.ui.draw.clip
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgBadge
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgChip
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.SignedAmountText
+import com.shohankhan.hisabghor.core.designsystem.Space
+import com.shohankhan.hisabghor.core.designsystem.ConfirmDialog
 
 // ---------------- Account list ----------------
 
@@ -107,79 +139,394 @@ fun AccountListScreen(
     )
     val accounts by viewModel.accounts.collectAsState()
     val showArchived by viewModel.showArchived.collectAsState()
-    val total = accounts.filter { it.account.archivedAt == null }.sumOf { it.balancePoisha }
+    val active = accounts.filter { it.account.archivedAt == null }
+    val total = active.sumOf { it.balancePoisha }
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "অ্যাকাউন্টসমূহ") },
+    HgScreen(
+        title = "হিসাব",
+        subtitle = "অ্যাকাউন্ট ও ব্যালেন্স",
+        insetBottom = false,
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddAccount) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন অ্যাকাউন্ট যোগ করুন")
-            }
+            ExtendedFloatingActionButton(
+                onClick = onAddAccount,
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন অ্যাকাউন্ট", style = MaterialTheme.typography.labelLarge) }
+            )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("সর্বমোট ব্যালান্স", style = MaterialTheme.typography.bodyMedium)
-                    AmountText(total, style = MaterialTheme.typography.headlineMedium)
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.md),
+                    padding = PaddingValues(Space.xl)
+                ) {
+                    Eyebrow("সব অ্যাকাউন্ট মিলিয়ে")
+                    Spacer(Modifier.height(Space.xs))
+                    AmountText(total, style = HgAmountType.large, color = Hg.colors.ink)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "${BengaliNumber.formatCount(active.size.toLong())}টি সক্রিয় অ্যাকাউন্ট",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
                 }
             }
-            Row(Modifier.padding(horizontal = 16.dp)) {
-                FilterChip(
-                    selected = showArchived,
-                    onClick = { viewModel.setShowArchived(!showArchived) },
-                    label = { Text("আর্কাইভ করাগুলোও দেখান") }
-                )
+
+            item {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ScreenPadding, vertical = Space.xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "অ্যাকাউন্ট",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Hg.colors.ink,
+                        modifier = Modifier.weight(1f)
+                    )
+                    HgChip(
+                        text = "আর্কাইভ দেখান",
+                        selected = showArchived,
+                        onClick = { viewModel.setShowArchived(!showArchived) }
+                    )
+                }
             }
+
             if (accounts.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.AccountBalanceWallet,
-                    title = "কোনো অ্যাকাউন্ট নেই",
-                    subtitle = "ক্যাশ, ব্যাংক বা বিকাশের মতো অ্যাকাউন্ট যোগ করুন।",
-                    actionLabel = "অ্যাকাউন্ট যোগ করুন",
-                    onAction = onAddAccount
-                )
+                item {
+                    com.shohankhan.hisabghor.core.designsystem.EmptyState(
+                        icon = Icons.Filled.AccountBalanceWallet,
+                        title = "কোনো অ্যাকাউন্ট নেই",
+                        subtitle = "ক্যাশ, ব্যাংক বা বিকাশের মতো অ্যাকাউন্ট যোগ করে শুরু করুন।",
+                        actionLabel = "অ্যাকাউন্ট যোগ করুন",
+                        onAction = onAddAccount
+                    )
+                }
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(accounts, key = { it.account.id }) { item ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenAccount(item.account.id) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                accountTypeIcon(item.account.type),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.height(0.dp))
-                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                                Text(
-                                    item.account.name +
-                                        if (item.account.archivedAt != null) " (আর্কাইভ)" else "",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    "${item.account.type.bnLabel()} • ${item.account.scope.bnLabel()}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            AmountText(
-                                item.balancePoisha,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = if (item.balancePoisha < 0) Danger600 else MaterialTheme.colorScheme.onSurface
-                            )
+                item {
+                    HgCard(
+                        Modifier.padding(horizontal = ScreenPadding),
+                        padding = PaddingValues(vertical = Space.xs)
+                    ) {
+                        accounts.forEachIndexed { index, item ->
+                            AccountRow(item, onClick = { onOpenAccount(item.account.id) })
+                            if (index != accounts.lastIndex) HgDivider(startInset = 72)
                         }
-                        HorizontalDivider(Modifier.padding(start = 52.dp))
                     }
                 }
             }
+            item { Spacer(Modifier.height(Space.xxl)) }
         }
+    }
+}
+
+@Composable
+private fun AccountRow(item: AccountWithBalance, onClick: () -> Unit) {
+    HgListRow(
+        title = item.account.name,
+        subtitle = "${item.account.type.bnLabel()} • ${item.account.scope.bnLabel()}",
+        leading = {
+            IconChip(accountTypeIcon(item.account.type))
+        },
+        titleTrailing = if (item.account.archivedAt != null) {
+            { HgBadge("আর্কাইভ", HgTone.Neutral) }
+        } else null,
+        trailing = {
+            AmountText(
+                item.balancePoisha,
+                style = HgAmountType.medium,
+                color = if (item.balancePoisha < 0) Hg.colors.expense else Hg.colors.ink
+            )
+        },
+        onClick = onClick
+    )
+}
+
+@Composable
+fun AccountEditorScreen(
+    editId: Long,
+    onBack: () -> Unit,
+    onSaved: () -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: AccountEditorViewModel = viewModel(
+        key = "account_editor_$editId",
+        factory = hisabViewModelFactory {
+            AccountEditorViewModel(editId, container.database, container.accountRepository)
+        }
+    )
+    val state by viewModel.state.collectAsState()
+    var showArchiveConfirm by remember { mutableStateOf(false) }
+    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+
+    HgScreen(
+        title = if (state.isEdit) "অ্যাকাউন্ট সম্পাদনা" else "নতুন অ্যাকাউন্ট",
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = "সংরক্ষণ করুন",
+                    onClick = viewModel::save,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        androidx.compose.foundation.layout.Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = ScreenPadding)
+        ) {
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.name,
+                onValueChange = viewModel::setName,
+                label = "অ্যাকাউন্টের নাম",
+                placeholder = "যেমন: বিকাশ (০১৯…)",
+                error = if (state.name.isBlank() && state.error != null) state.error else null
+            )
+            Spacer(Modifier.height(Space.md))
+            SelectionField(
+                label = "অ্যাকাউন্টের ধরন",
+                selectedText = state.type.bnLabel(),
+                options = AccountType.entries.toList(),
+                optionLabel = { it.bnLabel() },
+                onSelect = viewModel::setType
+            )
+            Spacer(Modifier.height(Space.md))
+            com.shohankhan.hisabghor.core.designsystem.FormSectionLabel("ব্যবহার")
+            HgSegmented(
+                options = AccountScope.entries.toList(),
+                selected = state.scope,
+                label = { it.bnLabel() },
+                onSelect = viewModel::setScope
+            )
+            Spacer(Modifier.height(Space.lg))
+            HgAmountInput(
+                value = state.openingText,
+                onValueChange = viewModel::setOpening
+            )
+            Spacer(Modifier.height(Space.xs))
+            Text(
+                "শুরুর ব্যালান্স (ঐচ্ছিক)",
+                style = MaterialTheme.typography.bodySmall,
+                color = Hg.colors.inkSecondary
+            )
+            Spacer(Modifier.height(Space.md))
+            HgNotice(
+                title = "শুরুর ব্যালান্স আয় নয়",
+                message = "এটি শুধু হিসাব শুরুর অবস্থা বোঝায় — আয় হিসেবে ধরা হয় না।",
+                tone = HgTone.Neutral
+            )
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.note,
+                onValueChange = viewModel::setNote,
+                label = "মন্তব্য (ঐচ্ছিক)"
+            )
+            state.error?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
+            }
+            if (state.isEdit) {
+                Spacer(Modifier.height(Space.lg))
+                HgDivider()
+                Spacer(Modifier.height(Space.md))
+                HgButton(
+                    text = if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "অ্যাকাউন্ট আর্কাইভ করুন",
+                    onClick = {
+                        if (state.archived) viewModel.setArchived(false) else showArchiveConfirm = true
+                    },
+                    style = HgButtonStyle.Secondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(Space.xs))
+                Text(
+                    "আর্কাইভ করলে অ্যাকাউন্টটি তালিকায় লুকিয়ে থাকবে, পুরনো লেনদেন ও হিসাব অক্ষত থাকবে।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary
+                )
+            }
+            Spacer(Modifier.height(Space.xxl))
+        }
+    }
+
+    if (showArchiveConfirm) {
+        ConfirmDialog(
+            title = "অ্যাকাউন্ট আর্কাইভ করবেন?",
+            message = "তালিকা থেকে লুকিয়ে যাবে, তবে সব পুরনো লেনদেন ও ব্যালান্স অক্ষত থাকবে।",
+            confirmText = "আর্কাইভ করুন",
+            onConfirm = {
+                viewModel.setArchived(true)
+                showArchiveConfirm = false
+            },
+            onDismiss = { showArchiveConfirm = false }
+        )
+    }
+}
+
+@Composable
+fun AccountDetailScreen(
+    accountId: Long,
+    onBack: () -> Unit,
+    onEdit: (Long) -> Unit,
+    onOpenTransaction: (Long) -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: AccountDetailViewModel = viewModel(
+        key = "account_detail_$accountId",
+        factory = hisabViewModelFactory {
+            AccountDetailViewModel(accountId, container.accountRepository, container.database)
+        }
+    )
+    val state by viewModel.uiState.collectAsState()
+    var showAdjust by remember { mutableStateOf(false) }
+
+    HgScreen(
+        title = state.account?.name ?: "অ্যাকাউন্ট",
+        subtitle = state.account?.let { "${it.type.bnLabel()} • ${it.scope.bnLabel()}" },
+        onBack = onBack,
+        actions = {
+            IconButton(onClick = { onEdit(accountId) }) {
+                Icon(Icons.Filled.Edit, contentDescription = "অ্যাকাউন্ট সম্পাদনা", tint = Hg.colors.ink)
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = Space.xxl)
+        ) {
+            item {
+                Column(Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)) {
+                    Eyebrow("বর্তমান ব্যালান্স")
+                    Spacer(Modifier.height(Space.xs))
+                    AmountText(
+                        state.balancePoisha,
+                        style = HgAmountType.hero,
+                        color = if (state.balancePoisha < 0) Hg.colors.expense else Hg.colors.ink
+                    )
+                    state.account?.note?.let {
+                        Spacer(Modifier.height(Space.xs))
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = Hg.colors.inkSecondary)
+                    }
+                    Spacer(Modifier.height(Space.md))
+                    HgButton(
+                        text = "ব্যালান্স মিলিয়ে নিন",
+                        onClick = { showAdjust = true },
+                        style = HgButtonStyle.Secondary,
+                        icon = Icons.Filled.Tune
+                    )
+                }
+            }
+            item {
+                Text(
+                    "স্টেটমেন্ট",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink,
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)
+                )
+            }
+            if (state.lines.isEmpty()) {
+                item {
+                    com.shohankhan.hisabghor.core.designsystem.EmptyState(
+                        icon = Icons.Filled.AccountBalanceWallet,
+                        title = "এখনো কোনো লেনদেন নেই",
+                        subtitle = "এই অ্যাকাউন্টে লেনদেন হলেই এখানে ক্রমিক ব্যালান্সসহ দেখা যাবে।"
+                    )
+                }
+            } else {
+                items(state.lines, key = { it.row.transactionId }) { line ->
+                    HgListRow(
+                        title = line.row.title,
+                        subtitle = Dates.formatShortDate(line.row.occurredAt),
+                        trailing = {
+                            Column(horizontalAlignment = Alignment.End) {
+                                SignedAmountText(
+                                    poisha = line.row.signedAmountPoisha,
+                                    style = HgAmountType.small
+                                )
+                                Text(
+                                    formatAmount(line.runningBalancePoisha),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Hg.colors.inkTertiary
+                                )
+                            }
+                        },
+                        onClick = { onOpenTransaction(line.row.transactionId) },
+                        showDivider = true,
+                        modifier = Modifier.padding(horizontal = ScreenPadding)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAdjust) {
+        var targetText by remember { mutableStateOf("") }
+        var noteText by remember { mutableStateOf("") }
+        var error by remember { mutableStateOf<String?>(null) }
+        AlertDialog(
+            onDismissRequest = { showAdjust = false },
+            containerColor = Hg.colors.surface,
+            shape = Radius.panel,
+            title = { Text("ব্যালান্স সমন্বয়") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
+                    Text(
+                        "বর্তমান ব্যালান্স ${formatAmount(state.balancePoisha)}। আসল ব্যালান্স লিখুন — " +
+                            "পার্থক্যটি সমন্বয় এন্ট্রি হিসেবে যোগ হবে, আয়/খরচ হিসেবে নয়।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                    MoneyInputField(
+                        value = targetText,
+                        onValueChange = { targetText = it },
+                        label = "আসল ব্যালান্স (টাকা)",
+                        error = error
+                    )
+                    HgTextField(
+                        value = noteText,
+                        onValueChange = { noteText = it },
+                        label = "কারণ (ঐচ্ছিক)"
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val target = BengaliNumber.parsePoisha(targetText)
+                    if (target == null) {
+                        error = "সঠিক পরিমাণ দিন"
+                    } else if (target == state.balancePoisha) {
+                        error = "ব্যালান্স ইতিমধ্যে মিলে আছে"
+                    } else {
+                        viewModel.adjustBalance(target, noteText.ifBlank { null })
+                        showAdjust = false
+                    }
+                }) { Text("সমন্বয় করুন", color = Hg.colors.brand) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAdjust = false }) {
+                    Text("বাতিল", color = Hg.colors.inkSecondary)
+                }
+            }
+        )
     }
 }
 
@@ -289,103 +636,6 @@ class AccountEditorViewModel(
     }
 }
 
-@Composable
-fun AccountEditorScreen(
-    editId: Long,
-    onBack: () -> Unit,
-    onSaved: () -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: AccountEditorViewModel = viewModel(
-        key = "account_editor_$editId",
-        factory = hisabViewModelFactory {
-            AccountEditorViewModel(editId, container.database, container.accountRepository)
-        }
-    )
-    val state by viewModel.state.collectAsState()
-    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (state.isEdit) "অ্যাকাউন্ট সম্পাদনা" else "নতুন অ্যাকাউন্ট",
-                onBack = onBack
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedTextField(
-                value = state.name,
-                onValueChange = viewModel::setName,
-                label = { Text("অ্যাকাউন্টের নাম") },
-                placeholder = { Text("যেমন: বিকাশ (01912••••••)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            SelectionField(
-                label = "অ্যাকাউন্টের ধরন",
-                selectedText = state.type.bnLabel(),
-                options = AccountType.entries.toList(),
-                optionLabel = { it.bnLabel() },
-                onSelect = viewModel::setType
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AccountScope.entries.forEach { scope ->
-                    FilterChip(
-                        selected = state.scope == scope,
-                        onClick = { viewModel.setScope(scope) },
-                        label = { Text(scope.bnLabel()) }
-                    )
-                }
-            }
-            MoneyInputField(
-                value = state.openingText,
-                onValueChange = viewModel::setOpening,
-                label = "শুরুর ব্যালান্স (টাকা)"
-            )
-            Text(
-                "শুরুর ব্যালান্স আয় হিসেবে ধরা হয় না — এটি শুধু হিসাব শুরুর অবস্থা।",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = viewModel::setNote,
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                Text("সংরক্ষণ করুন")
-            }
-            if (state.isEdit) {
-                OutlinedButton(
-                    onClick = { viewModel.setArchived(!state.archived) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "অ্যাকাউন্ট আর্কাইভ করুন")
-                }
-                Text(
-                    "আর্কাইভ করলে অ্যাকাউন্টটি তালিকায় লুকিয়ে থাকবে, কিন্তু পুরনো লেনদেন ও হিসাব অক্ষত থাকবে।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
 // ---------------- Account detail / statement ----------------
 
 data class StatementLine(
@@ -434,157 +684,3 @@ class AccountDetailViewModel(
     }
 }
 
-@Composable
-fun AccountDetailScreen(
-    accountId: Long,
-    onBack: () -> Unit,
-    onEdit: (Long) -> Unit,
-    onOpenTransaction: (Long) -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: AccountDetailViewModel = viewModel(
-        key = "account_detail_$accountId",
-        factory = hisabViewModelFactory {
-            AccountDetailViewModel(accountId, container.accountRepository, container.database)
-        }
-    )
-    val state by viewModel.uiState.collectAsState()
-    var showAdjust by remember { mutableStateOf(false) }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = state.account?.name ?: "অ্যাকাউন্ট",
-                onBack = onBack,
-                actions = {
-                    IconButton(onClick = { onEdit(accountId) }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "অ্যাকাউন্ট সম্পাদনা")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(
-                        "${state.account?.type?.bnLabel() ?: ""} • ${state.account?.scope?.bnLabel() ?: ""}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    AmountText(
-                        state.balancePoisha,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = if (state.balancePoisha < 0) Danger600 else Emerald600
-                    )
-                    state.account?.note?.let {
-                        Spacer(Modifier.height(4.dp))
-                        Text(it, style = MaterialTheme.typography.bodySmall)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = { showAdjust = true }) {
-                        Text("ব্যালান্স মিলিয়ে নিন (সমন্বয়)")
-                    }
-                }
-            }
-            Text(
-                "হিসাবের বিবরণী (স্টেটমেন্ট)",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-            if (state.lines.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.AccountBalanceWallet,
-                    title = "এখনো কোনো লেনদেন নেই",
-                    subtitle = "এই অ্যাকাউন্টে লেনদেন হলেই এখানে ক্রমিক ব্যালান্সসহ দেখা যাবে।"
-                )
-            } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(state.lines, key = { it.row.transactionId }) { line ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenTransaction(line.row.transactionId) }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(line.row.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(
-                                    Dates.formatShortDate(line.row.occurredAt),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                AmountText(
-                                    line.row.signedAmountPoisha,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = if (line.row.signedAmountPoisha < 0) Danger600 else Emerald600
-                                )
-                                Text(
-                                    "ব্যালান্স: ${formatAmount(line.runningBalancePoisha)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        HorizontalDivider(Modifier.padding(start = 16.dp))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showAdjust) {
-        var targetText by remember { mutableStateOf("") }
-        var noteText by remember { mutableStateOf("") }
-        var error by remember { mutableStateOf<String?>(null) }
-        AlertDialog(
-            onDismissRequest = { showAdjust = false },
-            title = { Text("ব্যালান্স সমন্বয়") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "বর্তমান ব্যালান্স: ${formatAmount(state.balancePoisha)}। " +
-                            "আসল ব্যালান্স লিখুন — পার্থক্যটি একটি সমন্বয় এন্ট্রি হিসেবে যোগ হবে (আয়/খরচ নয়)।",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    MoneyInputField(
-                        value = targetText,
-                        onValueChange = { targetText = it },
-                        label = "আসল ব্যালান্স (টাকা)",
-                        error = error
-                    )
-                    OutlinedTextField(
-                        value = noteText,
-                        onValueChange = { noteText = it },
-                        label = { Text("কারণ (ঐচ্ছিক)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val target = BengaliNumber.parsePoisha(targetText)
-                    if (target == null) {
-                        error = "সঠিক পরিমাণ দিন"
-                    } else if (target == state.balancePoisha) {
-                        error = "ব্যালান্স ইতিমধ্যে মিলে আছে"
-                    } else {
-                        viewModel.adjustBalance(target, noteText.ifBlank { null })
-                        showAdjust = false
-                    }
-                }) { Text("সমন্বয় করুন") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAdjust = false }) { Text("বাতিল") }
-            }
-        )
-    }
-}

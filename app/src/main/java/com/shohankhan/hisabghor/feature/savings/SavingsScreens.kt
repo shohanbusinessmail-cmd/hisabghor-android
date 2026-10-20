@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +75,27 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ExtendedFloatingActionButton
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.AmountText
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 // ---------------- savings list ----------------
 
@@ -101,116 +124,451 @@ fun SavingsScreen(
     val goals by viewModel.goals.collectAsState()
     val includeArchived by viewModel.includeArchived.collectAsState()
     val totalSaved = goals.sumOf { it.savedPoisha }
+    val totalTarget = goals.sumOf { it.goal.targetPoisha }
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "সঞ্চয়") },
+    HgScreen(
+        title = "সঞ্চয়",
+        subtitle = "লক্ষ্য ও জমার হিসাব",
+        insetBottom = false,
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddGoal) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন লক্ষ্য যোগ করুন")
-            }
+            ExtendedFloatingActionButton(
+                onClick = onAddGoal,
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন লক্ষ্য", style = MaterialTheme.typography.labelLarge) }
+            )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("মোট সঞ্চয় (সব লক্ষ্যে)", style = MaterialTheme.typography.bodyMedium)
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.md),
+                    padding = PaddingValues(Space.lg)
+                ) {
+                    Eyebrow("মোট সঞ্চয়")
+                    Spacer(Modifier.height(Space.xs))
+                    AmountText(totalSaved, style = HgAmountType.medium, color = Hg.colors.income)
+                    Spacer(Modifier.height(Space.xs))
                     Text(
-                        formatAmount(totalSaved),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Emerald600
+                        "লক্ষ্য মিলিয়ে ${formatAmount(totalTarget)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(
+                    Spacer(Modifier.height(Space.md))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        HgButton(
+                            text = "জমা দিন",
                             onClick = { onMove(-1, -1, false) },
                             modifier = Modifier.weight(1f)
-                        ) { Text("সঞ্চয়ে জমা দিন") }
-                        OutlinedButton(
+                        )
+                        HgButton(
+                            text = "তুলুন",
                             onClick = { onMove(-1, -1, true) },
+                            style = HgButtonStyle.Secondary,
                             modifier = Modifier.weight(1f)
-                        ) { Text("সঞ্চয় থেকে তুলুন") }
+                        )
                     }
+                    Spacer(Modifier.height(Space.sm))
                     Text(
                         "সঞ্চয়ে টাকা রাখা খরচ নয় — টাকা আপনারই থাকে, শুধু অন্য অ্যাকাউন্টে সরানো হয়।",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Hg.colors.inkSecondary
                     )
                 }
             }
-            Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = !includeArchived,
-                    onClick = { viewModel.setIncludeArchived(false) },
-                    label = { Text("চলমান লক্ষ্য") }
-                )
-                FilterChip(
+            item {
+                HgSegmented(
+                    options = listOf(false, true),
                     selected = includeArchived,
-                    onClick = { viewModel.setIncludeArchived(true) },
-                    label = { Text("আর্কাইভসহ সব") }
+                    label = { if (it) "আর্কাইভসহ" else "চলমান লক্ষ্য" },
+                    onSelect = { viewModel.setIncludeArchived(it) },
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)
                 )
             }
             if (goals.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.Savings,
-                    title = "কোনো সঞ্চয় লক্ষ্য নেই",
-                    subtitle = "ঈদ, জমি, জরুরি তহবিল — লক্ষ্য ঠিক করে ধাপে ধাপে জমাতে শুরু করুন।",
-                    actionLabel = "লক্ষ্য যোগ করুন",
-                    onAction = onAddGoal
-                )
-            } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(goals, key = { it.goal.id }) { item ->
-                        val goal = item.goal
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onEditGoal(goal.id) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(
-                                    goal.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(
-                                    BengaliNumber.formatPercentBp((item.progressFraction * 10000).toInt()),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Emerald600
-                                )
-                            }
-                            Text(
-                                goal.productType.bnLabel() +
-                                    (goal.targetDate?.let { " • লক্ষ্য ${Dates.formatShortDate(it)}" } ?: "") +
-                                    if (goal.archivedAt != null) " • আর্কাইভ করা" else "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            LabeledProgress(
-                                fraction = item.progressFraction,
-                                leftText = "জমেছে ${formatAmount(item.savedPoisha)}",
-                                rightText = "লক্ষ্য ${formatAmount(goal.targetPoisha)}"
-                            )
-                            Row(
-                                Modifier.fillMaxWidth().padding(top = 6.dp),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                OutlinedButton(
-                                    onClick = { onMove(goal.id, goal.accountId ?: -1, false) }
-                                ) { Text("জমা দিন") }
-                                Spacer(Modifier.padding(horizontal = 4.dp))
-                                OutlinedButton(
-                                    onClick = { onMove(goal.id, goal.accountId ?: -1, true) }
-                                ) { Text("তুলুন") }
-                            }
-                        }
-                        HorizontalDivider(Modifier.padding(start = 16.dp))
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.Savings,
+                        title = "কোনো সঞ্চয় লক্ষ্য নেই",
+                        subtitle = "ঈদ, জমি, জরুরি তহবিল — লক্ষ্য ঠিক করে ধাপে ধাপে জমাতে শুরু করুন।",
+                        actionLabel = "লক্ষ্য যোগ করুন",
+                        onAction = onAddGoal
+                    )
+                }
+            }
+            items(goals, key = { it.goal.id }) { item ->
+                val goal = item.goal
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs),
+                    padding = PaddingValues(Space.lg)
+                ) {
+                    EgGoalHeader(goal.name, item.progressFraction)
+                    Spacer(Modifier.height(Space.xs))
+                    Text(
+                        goal.productType.bnLabel() +
+                            (goal.targetDate?.let { " • লক্ষ্য ${Dates.formatShortDate(it)}" } ?: "") +
+                            if (goal.archivedAt != null) " • আর্কাইভ করা" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                    Spacer(Modifier.height(Space.sm))
+                    LabeledProgress(
+                        fraction = item.progressFraction,
+                        leftText = "জমেছে ${formatAmount(item.savedPoisha)}",
+                        rightText = "লক্ষ্য ${formatAmount(goal.targetPoisha)}"
+                    )
+                    Spacer(Modifier.height(Space.md))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        HgButton(
+                            text = "জমা দিন",
+                            onClick = { onMove(goal.id, goal.accountId ?: -1, false) },
+                            style = HgButtonStyle.Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        HgButton(
+                            text = "তুলুন",
+                            onClick = { onMove(goal.id, goal.accountId ?: -1, true) },
+                            style = HgButtonStyle.Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        HgButton(
+                            text = "সম্পাদনা",
+                            onClick = { onEditGoal(goal.id) },
+                            style = HgButtonStyle.Ghost,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EgGoalHeader(name: String, progress: Float) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconChip(Icons.Filled.Savings)
+        Spacer(Modifier.width(Space.md))
+        Text(
+            name,
+            style = MaterialTheme.typography.titleMedium,
+            color = Hg.colors.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            BengaliNumber.formatPercentBp((progress * 10000).toInt()),
+            style = MaterialTheme.typography.labelLarge,
+            color = Hg.colors.income
+        )
+    }
+}
+
+@Composable
+fun GoalEditorScreen(
+    editId: Long,
+    onBack: () -> Unit,
+    onSaved: () -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: GoalEditorViewModel = viewModel(
+        key = "goal_editor_$editId",
+        factory = hisabViewModelFactory {
+            GoalEditorViewModel(editId, container.savingsRepository, container.accountRepository)
+        }
+    )
+    val state by viewModel.state.collectAsState()
+    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+
+    HgScreen(
+        title = if (state.isEdit) "লক্ষ্য সম্পাদনা" else "নতুন সঞ্চয় লক্ষ্য",
+        subtitle = "সঞ্চয়ের লক্ষ্য ঠিক করুন",
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = "সংরক্ষণ করুন",
+                    onClick = viewModel::save,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = ScreenPadding)
+        ) {
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.name,
+                onValueChange = { v -> viewModel.update { it.copy(name = v) } },
+                label = "লক্ষ্যের নাম",
+                placeholder = "যেমন: জরুরি তহবিল, ঈদের সঞ্চয়"
+            )
+            Spacer(Modifier.height(Space.md))
+            HgAmountInput(
+                value = state.targetText,
+                onValueChange = { v -> viewModel.update { it.copy(targetText = v) } },
+                error = state.error
+            )
+            Spacer(Modifier.height(Space.lg))
+            Text(
+                "সঞ্চয়ের ধরন",
+                style = MaterialTheme.typography.titleMedium,
+                color = Hg.colors.ink
+            )
+            Spacer(Modifier.height(Space.sm))
+            HgSegmented(
+                options = SavingsProductType.entries,
+                selected = state.productType,
+                label = { it.bnLabel() },
+                onSelect = { type -> viewModel.update { it.copy(productType = type) } }
+            )
+            Spacer(Modifier.height(Space.md))
+            if (state.savingsAccounts.isNotEmpty()) {
+                SelectionField(
+                    label = "যুক্ত সঞ্চয় অ্যাকাউন্ট (ঐচ্ছিক)",
+                    selectedText = state.savingsAccounts.firstOrNull { it.id == state.accountId }?.name
+                        ?: "কোনোটি নয়",
+                    options = state.savingsAccounts,
+                    optionLabel = { it.name },
+                    onSelect = { selected -> viewModel.update { it.copy(accountId = selected.id) } }
+                )
+            } else {
+                HgNotice(
+                    title = "সঞ্চয় অ্যাকাউন্ট নেই",
+                    message = "অ্যাকাউন্ট পেজ থেকে 'সঞ্চয় অ্যাকাউন্ট' ধরনের অ্যাকাউন্ট তৈরি করলে এখানে যুক্ত করতে পারবেন।",
+                    tone = HgTone.Neutral
+                )
+            }
+            Spacer(Modifier.height(Space.md))
+            HgCard(padding = PaddingValues(Space.lg)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("লক্ষ্যের তারিখ আছে", style = MaterialTheme.typography.bodyLarge, color = Hg.colors.ink)
+                        Text(
+                            "নির্বাচিত তারিখ পর্যন্ত সময় বাকি দেখানো হবে",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkSecondary
+                        )
+                    }
+                    Spacer(Modifier.width(Space.md))
+                    Switch(
+                        checked = state.hasTargetDate,
+                        onCheckedChange = { checked -> viewModel.update { it.copy(hasTargetDate = checked) } },
+                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                            checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                            checkedTrackColor = Hg.colors.brand,
+                            uncheckedThumbColor = Hg.colors.surface,
+                            uncheckedTrackColor = Hg.colors.surfaceSunken,
+                            uncheckedBorderColor = Hg.colors.hairlineStrong
+                        )
+                    )
+                }
+                if (state.hasTargetDate) {
+                    Spacer(Modifier.height(Space.md))
+                    DateField(
+                        date = state.targetDate,
+                        onDateChange = { v -> viewModel.update { it.copy(targetDate = v) } },
+                        label = "লক্ষ্যের তারিখ"
+                    )
+                }
+            }
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.note,
+                onValueChange = { v -> viewModel.update { it.copy(note = v) } },
+                label = "মন্তব্য (ঐচ্ছিক)"
+            )
+            state.error?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
+            }
+            if (state.isEdit) {
+                Spacer(Modifier.height(Space.lg))
+                HgButton(
+                    text = if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "আর্কাইভ করুন",
+                    onClick = { viewModel.setArchived(!state.archived) },
+                    style = HgButtonStyle.Secondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Spacer(Modifier.height(Space.xxl))
+        }
+    }
+}
+
+@Composable
+fun SavingsMoveScreen(
+    goalId: Long,
+    accountId: Long,
+    withdraw: Boolean,
+    editId: Long,
+    onBack: () -> Unit,
+    onSaved: () -> Unit,
+    onCreateSavingsAccount: () -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: SavingsMoveViewModel = viewModel(
+        key = "savings_move_${goalId}_${accountId}_${withdraw}_$editId",
+        factory = hisabViewModelFactory {
+            SavingsMoveViewModel(
+                goalId, accountId, withdraw, editId,
+                container.database, container.accountRepository, container.savingsRepository
+            )
+        }
+    )
+    val state by viewModel.state.collectAsState()
+    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+    val savingsAccounts = state.accounts.filter { it.type == AccountType.SAVINGS }
+
+    HgScreen(
+        title = if (withdraw) "সঞ্চয় থেকে উত্তোলন" else "সঞ্চয়ে জমা",
+        subtitle = "অ্যাকাউন্টের মধ্যে সরানো",
+        onBack = onBack,
+        bottomBar = {
+            if (savingsAccounts.isNotEmpty()) {
+                HgFormBottomBar {
+                    HgButton(
+                        text = if (withdraw) "উত্তোলন করুন" else "জমা দিন",
+                        onClick = viewModel::save,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = ScreenPadding)
+        ) {
+            Spacer(Modifier.height(Space.md))
+            HgNotice(
+                title = if (withdraw) "উত্তোলন করলেও টাকা আপনারই" else "জমা দেওয়া টাকা খরচ নয়",
+                message = if (withdraw) "এটি আয় হিসেবে গণনা হবে না, শুধু অ্যাকাউন্ট বদলাবে।"
+                else "টাকা আপনার সঞ্চয় অ্যাকাউন্টেই জমা থাকবে।",
+                tone = HgTone.Neutral
+            )
+            Spacer(Modifier.height(Space.md))
+            if (savingsAccounts.isEmpty()) {
+                HgCard(padding = PaddingValues(Space.lg)) {
+                    Text(
+                        "আপনার কোনো সঞ্চয় অ্যাকাউন্ট নেই। প্রথমে একটি 'সঞ্চয় অ্যাকাউন্ট' তৈরি করুন।",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Hg.colors.ink
+                    )
+                    Spacer(Modifier.height(Space.md))
+                    HgButton(
+                        text = "সঞ্চয় অ্যাকাউন্ট তৈরি করুন",
+                        onClick = onCreateSavingsAccount,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            } else {
+                HgAmountInput(
+                    value = state.amountText,
+                    onValueChange = { v -> viewModel.update { it.copy(amountText = v) } },
+                    error = state.error
+                )
+                Spacer(Modifier.height(Space.md))
+                SelectionField(
+                    label = "সঞ্চয় অ্যাকাউন্ট",
+                    selectedText = savingsAccounts.firstOrNull { it.id == state.savingsAccountId }?.name
+                        ?: "বেছে নিন",
+                    options = savingsAccounts,
+                    optionLabel = { it.name },
+                    onSelect = { selected -> viewModel.update { it.copy(savingsAccountId = selected.id) } }
+                )
+                Spacer(Modifier.height(Space.md))
+                SelectionField(
+                    label = if (withdraw) "যে অ্যাকাউন্টে টাকা আসবে" else "যে অ্যাকাউন্ট থেকে জমা দেবেন",
+                    selectedText = state.accounts.firstOrNull { it.id == state.sourceAccountId }?.name
+                        ?: "বেছে নিন",
+                    options = state.accounts,
+                    optionLabel = { it.name },
+                    onSelect = { selected -> viewModel.update { it.copy(sourceAccountId = selected.id) } }
+                )
+                if (state.goals.isNotEmpty()) {
+                    Spacer(Modifier.height(Space.md))
+                    SelectionField(
+                        label = "সঞ্চয় লক্ষ্য (ঐচ্ছিক)",
+                        selectedText = state.goals.firstOrNull { it.id == state.goalId }?.name
+                            ?: "কোনো লক্ষ্য নয়",
+                        options = state.goals,
+                        optionLabel = { it.name },
+                        onSelect = { selected ->
+                            viewModel.update {
+                                it.copy(
+                                    goalId = selected.id,
+                                    savingsAccountId = selected.accountId ?: it.savingsAccountId
+                                )
+                            }
+                        }
+                    )
+                }
+                Spacer(Modifier.height(Space.md))
+                DateField(
+                    date = state.date,
+                    onDateChange = { v -> viewModel.update { it.copy(date = v) } },
+                    label = "তারিখ"
+                )
+                Spacer(Modifier.height(Space.md))
+                HgTextField(
+                    value = state.note,
+                    onValueChange = { v -> viewModel.update { it.copy(note = v) } },
+                    label = "মন্তব্য (ঐচ্ছিক)"
+                )
+                val fromName = state.accounts.firstOrNull {
+                    it.id == if (withdraw) state.savingsAccountId else state.sourceAccountId
+                }?.name
+                val toName = state.accounts.firstOrNull {
+                    it.id == if (withdraw) state.sourceAccountId else state.savingsAccountId
+                }?.name
+                if (fromName != null && toName != null) {
+                    Spacer(Modifier.height(Space.md))
+                    HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                        Row(
+                            Modifier.padding(horizontal = Space.lg, vertical = Space.sm),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Eyebrow("টাকা যাবে")
+                            Spacer(Modifier.width(Space.sm))
+                            Text(
+                                "$fromName → $toName",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Hg.colors.ink,
+                                modifier = Modifier.weight(1f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.End
+                            )
+                        }
+                    }
+                }
+                state.error?.let {
+                    Spacer(Modifier.height(Space.md))
+                    HgNotice(title = it, tone = HgTone.Expense)
+                }
+            }
+            Spacer(Modifier.height(Space.xxl))
         }
     }
 }
@@ -324,121 +682,6 @@ class GoalEditorViewModel(
             savings.setArchived(goal, archived)
             existing = savings.getGoal(editId)
             _state.update { it.copy(archived = archived) }
-        }
-    }
-}
-
-@Composable
-fun GoalEditorScreen(
-    editId: Long,
-    onBack: () -> Unit,
-    onSaved: () -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: GoalEditorViewModel = viewModel(
-        key = "goal_editor_$editId",
-        factory = hisabViewModelFactory {
-            GoalEditorViewModel(editId, container.savingsRepository, container.accountRepository)
-        }
-    )
-    val state by viewModel.state.collectAsState()
-    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (state.isEdit) "লক্ষ্য সম্পাদনা" else "নতুন সঞ্চয় লক্ষ্য",
-                onBack = onBack
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedTextField(
-                value = state.name,
-                onValueChange = { v -> viewModel.update { it.copy(name = v) } },
-                label = { Text("লক্ষ্যের নাম") },
-                placeholder = { Text("যেমন: জরুরি তহবিল, ঈদের সঞ্চয়") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            MoneyInputField(
-                value = state.targetText,
-                onValueChange = { v -> viewModel.update { it.copy(targetText = v) } },
-                label = "মোট লক্ষ্য পরিমাণ (টাকা)",
-                error = state.error
-            )
-            Text("সঞ্চয়ের ধরন", style = MaterialTheme.typography.titleSmall)
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SavingsProductType.entries.forEach { type ->
-                    FilterChip(
-                        selected = state.productType == type,
-                        onClick = { viewModel.update { it.copy(productType = type) } },
-                        label = { Text(type.bnLabel()) }
-                    )
-                }
-            }
-            if (state.savingsAccounts.isNotEmpty()) {
-                SelectionField(
-                    label = "যুক্ত সঞ্চয় অ্যাকাউন্ট (ঐচ্ছিক)",
-                    selectedText = state.savingsAccounts.firstOrNull { it.id == state.accountId }?.name
-                        ?: "কোনোটি নয়",
-                    options = state.savingsAccounts,
-                    optionLabel = { it.name },
-                    onSelect = { selected -> viewModel.update { it.copy(accountId = selected.id) } }
-                )
-            } else {
-                Text(
-                    "কোনো সঞ্চয় অ্যাকাউন্ট নেই — অ্যাকাউন্ট পেজ থেকে 'সঞ্চয় অ্যাকাউন্ট' ধরনের অ্যাকাউন্ট তৈরি করলে এখানে যুক্ত করতে পারবেন।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("লক্ষ্যের তারিখ আছে", style = MaterialTheme.typography.bodyMedium)
-                Switch(
-                    checked = state.hasTargetDate,
-                    onCheckedChange = { checked -> viewModel.update { it.copy(hasTargetDate = checked) } }
-                )
-            }
-            if (state.hasTargetDate) {
-                DateField(
-                    date = state.targetDate,
-                    onDateChange = { v -> viewModel.update { it.copy(targetDate = v) } },
-                    label = "লক্ষ্যের তারিখ"
-                )
-            }
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = { v -> viewModel.update { it.copy(note = v) } },
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                Text("সংরক্ষণ করুন")
-            }
-            if (state.isEdit) {
-                OutlinedButton(
-                    onClick = { viewModel.setArchived(!state.archived) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "আর্কাইভ করুন")
-                }
-            }
         }
     }
 }
@@ -557,135 +800,3 @@ class SavingsMoveViewModel(
     }
 }
 
-@Composable
-fun SavingsMoveScreen(
-    goalId: Long,
-    accountId: Long,
-    withdraw: Boolean,
-    editId: Long,
-    onBack: () -> Unit,
-    onSaved: () -> Unit,
-    onCreateSavingsAccount: () -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: SavingsMoveViewModel = viewModel(
-        key = "savings_move_${goalId}_${accountId}_${withdraw}_$editId",
-        factory = hisabViewModelFactory {
-            SavingsMoveViewModel(
-                goalId, accountId, withdraw, editId,
-                container.database, container.accountRepository, container.savingsRepository
-            )
-        }
-    )
-    val state by viewModel.state.collectAsState()
-    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
-    val savingsAccounts = state.accounts.filter { it.type == AccountType.SAVINGS }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (withdraw) "সঞ্চয় থেকে উত্তোলন" else "সঞ্চয়ে জমা",
-                onBack = onBack
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                if (withdraw) "উত্তোলন করলেও টাকা আপনারই — এটি আয় হিসাবে গণনা হবে না।"
-                else "জমা দেওয়া টাকা খরচ নয় — টাকা আপনার সঞ্চয় অ্যাকাউন্টেই জমা থাকবে।",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (savingsAccounts.isEmpty()) {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "আপনার কোনো সঞ্চয় অ্যাকাউন্ট নেই। প্রথমে একটি 'সঞ্চয় অ্যাকাউন্ট' তৈরি করুন।",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = onCreateSavingsAccount, modifier = Modifier.fillMaxWidth()) {
-                            Text("সঞ্চয় অ্যাকাউন্ট তৈরি করুন")
-                        }
-                    }
-                }
-            } else {
-                MoneyInputField(
-                    value = state.amountText,
-                    onValueChange = { v -> viewModel.update { it.copy(amountText = v) } },
-                    label = "পরিমাণ (টাকা)",
-                    error = state.error
-                )
-                SelectionField(
-                    label = "সঞ্চয় অ্যাকাউন্ট",
-                    selectedText = savingsAccounts.firstOrNull { it.id == state.savingsAccountId }?.name
-                        ?: "বেছে নিন",
-                    options = savingsAccounts,
-                    optionLabel = { it.name },
-                    onSelect = { selected -> viewModel.update { it.copy(savingsAccountId = selected.id) } }
-                )
-                SelectionField(
-                    label = if (withdraw) "যে অ্যাকাউন্টে টাকা আসবে" else "যে অ্যাকাউন্ট থেকে জমা দেবেন",
-                    selectedText = state.accounts.firstOrNull { it.id == state.sourceAccountId }?.name
-                        ?: "বেছে নিন",
-                    options = state.accounts,
-                    optionLabel = { it.name },
-                    onSelect = { selected -> viewModel.update { it.copy(sourceAccountId = selected.id) } }
-                )
-                if (state.goals.isNotEmpty()) {
-                    SelectionField(
-                        label = "সঞ্চয় লক্ষ্য (ঐচ্ছিক)",
-                        selectedText = state.goals.firstOrNull { it.id == state.goalId }?.name
-                            ?: "কোনো লক্ষ নয়",
-                        options = state.goals,
-                        optionLabel = { it.name },
-                        onSelect = { selected ->
-                            viewModel.update {
-                                it.copy(
-                                    goalId = selected.id,
-                                    savingsAccountId = selected.accountId ?: it.savingsAccountId
-                                )
-                            }
-                        }
-                    )
-                }
-                DateField(
-                    date = state.date,
-                    onDateChange = { v -> viewModel.update { it.copy(date = v) } },
-                    label = "তারিখ"
-                )
-                OutlinedTextField(
-                    value = state.note,
-                    onValueChange = { v -> viewModel.update { it.copy(note = v) } },
-                    label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                val fromName = state.accounts.firstOrNull {
-                    it.id == if (withdraw) state.savingsAccountId else state.sourceAccountId
-                }?.name
-                val toName = state.accounts.firstOrNull {
-                    it.id == if (withdraw) state.sourceAccountId else state.savingsAccountId
-                }?.name
-                if (fromName != null && toName != null) {
-                    KvRow("টাকা যাবে", "$fromName → $toName")
-                }
-                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (withdraw) "উত্তোলন করুন" else "জমা দিন")
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-        }
-    }
-}

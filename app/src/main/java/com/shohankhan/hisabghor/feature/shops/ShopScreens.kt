@@ -69,6 +69,27 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ExtendedFloatingActionButton
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.FormSectionLabel
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgChip
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 // ---------------- list ----------------
 
@@ -95,87 +116,361 @@ fun ShopListScreen(
     val totalDue by viewModel.totalDue.collectAsState()
     val showArchived by viewModel.showArchived.collectAsState()
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "দোকান ও বাকির হিসাব") },
+    HgScreen(
+        title = "দোকানের খাতা",
+        subtitle = "বাকি কেনা ও পরিশোধ",
+        insetBottom = false,
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddShop) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন দোকান যোগ করুন")
-            }
+            ExtendedFloatingActionButton(
+                onClick = onAddShop,
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন দোকান", style = MaterialTheme.typography.labelLarge) }
+            )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("সব দোকানে মোট বকেয়া", style = MaterialTheme.typography.bodyMedium)
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.md),
+                    padding = PaddingValues(Space.xl)
+                ) {
+                    Eyebrow("সব দোকানে মোট বাকি")
+                    Spacer(Modifier.height(Space.xs))
                     AmountText(
                         totalDue,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = if (totalDue > 0) Amber700 else MaterialTheme.colorScheme.onSurface
+                        style = HgAmountType.large,
+                        color = if (totalDue > 0) Hg.colors.warning else Hg.colors.ink
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "এই টাকা দোকানকে দিতে হবে",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
                     )
                 }
             }
-            Row(Modifier.padding(horizontal = 16.dp)) {
-                FilterChip(
-                    selected = showArchived,
-                    onClick = { viewModel.showArchived.value = !showArchived },
-                    label = { Text("আর্কাইভ করাগুলোও দেখান") }
-                )
+            item {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ScreenPadding, vertical = Space.xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "দোকান",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Hg.colors.ink,
+                        modifier = Modifier.weight(1f)
+                    )
+                    HgChip(
+                        text = "আর্কাইভ",
+                        selected = showArchived,
+                        onClick = { viewModel.showArchived.value = !showArchived }
+                    )
+                }
             }
             if (items.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.Storefront,
-                    title = "কোনো দোকান যোগ হয়নি",
-                    subtitle = "যে দোকান থেকে বাকিতে কেনেন, সেটি যোগ করে খাতা রাখুন।",
-                    actionLabel = "দোকান যোগ করুন",
-                    onAction = onAddShop
-                )
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.Storefront,
+                        title = "কোনো দোকান যোগ হয়নি",
+                        subtitle = "যে দোকান থেকে বাকিতে কেনেন, সেটি যোগ করে খাতা রাখুন।",
+                        actionLabel = "দোকান যোগ করুন",
+                        onAction = onAddShop
+                    )
+                }
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(items, key = { it.shop.id }) { item ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenShop(item.shop.id) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Filled.Storefront,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                item {
+                    HgCard(
+                        Modifier.padding(horizontal = ScreenPadding),
+                        padding = PaddingValues(vertical = Space.xs)
+                    ) {
+                        items.forEachIndexed { index, item ->
+                            HgListRow(
+                                title = item.shop.name,
+                                subtitle = listOfNotNull(
+                                    item.shop.merchantName,
+                                    item.shop.shopType,
+                                    if (item.shop.archivedAt != null) "আর্কাইভ" else null
+                                ).joinToString(" • "),
+                                leading = { IconChip(Icons.Filled.Storefront) },
+                                trailing = {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            if (item.duePoisha < 0) "অগ্রিম" else "বাকি",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Hg.colors.inkTertiary
+                                        )
+                                        AmountText(
+                                            kotlin.math.abs(item.duePoisha),
+                                            style = HgAmountType.small,
+                                            color = when {
+                                                item.duePoisha > 0 -> Hg.colors.warning
+                                                item.duePoisha < 0 -> Hg.colors.income
+                                                else -> Hg.colors.ink
+                                            }
+                                        )
+                                    }
+                                },
+                                onClick = { onOpenShop(item.shop.id) }
                             )
-                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                                Text(
-                                    item.shop.name + if (item.shop.archivedAt != null) " (আর্কাইভ)" else "",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    listOfNotNull(item.shop.merchantName, item.shop.shopType)
-                                        .joinToString(" • "),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    if (item.duePoisha < 0) "অগ্রিম আছে" else "বকেয়া",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                AmountText(
-                                    kotlin.math.abs(item.duePoisha),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = if (item.duePoisha > 0) Amber700 else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            if (index != items.lastIndex) HgDivider(startInset = 68)
                         }
-                        HorizontalDivider(Modifier.padding(start = 52.dp))
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ShopEditorScreen(
+    editId: Long,
+    onBack: () -> Unit,
+    onSaved: () -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: ShopEditorViewModel = viewModel(
+        key = "shop_editor_$editId",
+        factory = hisabViewModelFactory { ShopEditorViewModel(editId, container.shopRepository) }
+    )
+    val state by viewModel.state.collectAsState()
+    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+
+    HgScreen(
+        title = if (state.isEdit) "দোকান সম্পাদনা" else "নতুন দোকান",
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = "সংরক্ষণ করুন",
+                    onClick = viewModel::save,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = ScreenPadding)
+        ) {
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.name,
+                onValueChange = { v -> viewModel.update { it.copy(name = v) } },
+                label = "দোকানের নাম",
+                placeholder = "যেমন: রহিম স্টোর"
+            )
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.merchantName,
+                onValueChange = { v -> viewModel.update { it.copy(merchantName = v) } },
+                label = "দোকানদারের নাম (ঐচ্ছিক)"
+            )
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.phone,
+                onValueChange = { v -> viewModel.update { it.copy(phone = v) } },
+                label = "মোবাইল নম্বর (ঐচ্ছিক)",
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+            )
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.address,
+                onValueChange = { v -> viewModel.update { it.copy(address = v) } },
+                label = "ঠিকানা (ঐচ্ছিক)"
+            )
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.shopType,
+                onValueChange = { v -> viewModel.update { it.copy(shopType = v) } },
+                label = "দোকানের ধরন (ঐচ্ছিক)",
+                placeholder = "মুদি, ফার্মেসি, চালের আড়ত…"
+            )
+            if (!state.isEdit) {
+                Spacer(Modifier.height(Space.lg))
+                MoneyInputField(
+                    value = state.openingDueText,
+                    onValueChange = { v -> viewModel.update { it.copy(openingDueText = v) } },
+                    label = "আগের বকেয়া (যদি থাকে)"
+                )
+                Spacer(Modifier.height(Space.sm))
+                HgNotice(
+                    title = "আগের বকেয়া খরচ নয়",
+                    message = "আগে থেকেই যে টাকা বাকি ছিল, তা নতুন খরচ হিসেবে ধরা হবে না — শুধু দেনা হিসেবে দেখাবে।",
+                    tone = HgTone.Neutral
+                )
+            }
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.note,
+                onValueChange = { v -> viewModel.update { it.copy(note = v) } },
+                label = "মন্তব্য (ঐচ্ছিক)"
+            )
+            state.error?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
+            }
+            if (state.isEdit) {
+                Spacer(Modifier.height(Space.lg))
+                HgButton(
+                    text = if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "দোকান আর্কাইভ করুন",
+                    onClick = { viewModel.setArchived(!state.archived) },
+                    style = HgButtonStyle.Secondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Spacer(Modifier.height(Space.xxl))
+        }
+    }
+}
+
+@Composable
+fun ShopDetailScreen(
+    shopId: Long,
+    onBack: () -> Unit,
+    onEdit: (Long) -> Unit,
+    onNewPurchase: (Long) -> Unit,
+    onNewPayment: (Long) -> Unit,
+    onOpenTransaction: (Long) -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: ShopDetailViewModel = viewModel(
+        key = "shop_detail_$shopId",
+        factory = hisabViewModelFactory {
+            ShopDetailViewModel(
+                shopId, container.shopRepository,
+                container.transactionRepository, container.ledgerRepository
+            )
+        }
+    )
+    val state by viewModel.uiState.collectAsState()
+    val shop = state.shop
+
+    HgScreen(
+        title = shop?.name ?: "দোকান",
+        subtitle = "দোকানের খাতা",
+        onBack = onBack,
+        actions = {
+            IconButton(onClick = { onEdit(shopId) }) {
+                Icon(Icons.Filled.Edit, contentDescription = "দোকান সম্পাদনা", tint = Hg.colors.ink)
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = Space.xxl)
+        ) {
+            item {
+                Column(Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)) {
+                    Eyebrow(if (state.duePoisha >= 0) "বর্তমান বকেয়া" else "দোকানে আপনার অগ্রিম")
+                    Spacer(Modifier.height(Space.xs))
+                    AmountText(
+                        kotlin.math.abs(state.duePoisha),
+                        style = HgAmountType.hero,
+                        color = when {
+                            state.duePoisha > 0 -> Hg.colors.warning
+                            state.duePoisha < 0 -> Hg.colors.income
+                            else -> Hg.colors.ink
+                        }
+                    )
+                    Spacer(Modifier.height(Space.md))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        HgButton(
+                            text = "নতুন বাকি ক্রয়",
+                            onClick = { onNewPurchase(shopId) },
+                            icon = Icons.Filled.ShoppingCart,
+                            modifier = Modifier.weight(1f)
+                        )
+                        HgButton(
+                            text = "পরিশোধ",
+                            onClick = { onNewPayment(shopId) },
+                            style = HgButtonStyle.Secondary,
+                            icon = Icons.Filled.Payments,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+            shop?.let { s ->
+                item {
+                    HgCard(
+                        Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm),
+                        padding = PaddingValues(vertical = Space.xs)
+                    ) {
+                        s.merchantName?.let { DetailLine("দোকানদার", it) }
+                        s.phone?.let { DetailLine("মোবাইল", BengaliNumber.toBengaliDigits(it)) }
+                        s.address?.let { DetailLine("ঠিকানা", it) }
+                        s.shopType?.let { DetailLine("ধরন", it) }
+                        s.note?.takeIf { it.isNotBlank() }?.let { DetailLine("মন্তব্য", it) }
+                    }
+                }
+            }
+            item {
+                Text(
+                    "লেনদেনের ইতিহাস",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink,
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)
+                )
+            }
+            if (state.transactions.isEmpty()) {
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.Storefront,
+                        title = "এখনো কোনো লেনদেন নেই",
+                        subtitle = "নতুন বাকি ক্রয় যোগ করলে এখানে দেখা যাবে।"
+                    )
+                }
+            } else {
+                items(state.transactions, key = { it.id }) { txn ->
+                    Column(Modifier.padding(horizontal = ScreenPadding)) {
+                        TransactionRow(txn, onClick = { onOpenTransaction(txn.id) })
+                        HgDivider(startInset = 52)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailLine(label: String, value: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Space.lg, vertical = Space.sm)
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.inkSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.ink,
+            modifier = Modifier.weight(1.4f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
     }
 }
 
@@ -279,106 +574,6 @@ class ShopEditorViewModel(
     }
 }
 
-@Composable
-fun ShopEditorScreen(
-    editId: Long,
-    onBack: () -> Unit,
-    onSaved: () -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: ShopEditorViewModel = viewModel(
-        key = "shop_editor_$editId",
-        factory = hisabViewModelFactory { ShopEditorViewModel(editId, container.shopRepository) }
-    )
-    val state by viewModel.state.collectAsState()
-    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (state.isEdit) "দোকান সম্পাদনা" else "নতুন দোকান",
-                onBack = onBack
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedTextField(
-                value = state.name,
-                onValueChange = { v -> viewModel.update { it.copy(name = v) } },
-                label = { Text("দোকানের নাম") },
-                placeholder = { Text("যেমন: রহিম স্টোর") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.merchantName,
-                onValueChange = { v -> viewModel.update { it.copy(merchantName = v) } },
-                label = { Text("দোকানদারের নাম (ঐচ্ছিক)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.phone,
-                onValueChange = { v -> viewModel.update { it.copy(phone = v) } },
-                label = { Text("মোবাইল নম্বর (ঐচ্ছিক)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.address,
-                onValueChange = { v -> viewModel.update { it.copy(address = v) } },
-                label = { Text("ঠিকানা (ঐচ্ছিক)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.shopType,
-                onValueChange = { v -> viewModel.update { it.copy(shopType = v) } },
-                label = { Text("দোকানের ধরন (ঐচ্ছিক)") },
-                placeholder = { Text("মুদি, ফার্মেসি, চালের আড়ত…") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            if (!state.isEdit) {
-                MoneyInputField(
-                    value = state.openingDueText,
-                    onValueChange = { v -> viewModel.update { it.copy(openingDueText = v) } },
-                    label = "আগের বকেয়া (যদি থাকে)"
-                )
-            }
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = { v -> viewModel.update { it.copy(note = v) } },
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                Text("সংরক্ষণ করুন")
-            }
-            if (state.isEdit) {
-                OutlinedButton(
-                    onClick = { viewModel.setArchived(!state.archived) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "দোকান আর্কাইভ করুন")
-                }
-            }
-        }
-    }
-}
-
 // ---------------- detail (ledger) ----------------
 
 data class ShopDetailUiState(
@@ -402,107 +597,6 @@ class ShopDetailViewModel(
     ) { shop, due, txns ->
         ShopDetailUiState(loading = false, shop = shop, duePoisha = due, transactions = txns)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ShopDetailUiState())
-}
-
-@Composable
-fun ShopDetailScreen(
-    shopId: Long,
-    onBack: () -> Unit,
-    onEdit: (Long) -> Unit,
-    onNewPurchase: (Long) -> Unit,
-    onNewPayment: (Long) -> Unit,
-    onOpenTransaction: (Long) -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: ShopDetailViewModel = viewModel(
-        key = "shop_detail_$shopId",
-        factory = hisabViewModelFactory {
-            ShopDetailViewModel(
-                shopId, container.shopRepository,
-                container.transactionRepository, container.ledgerRepository
-            )
-        }
-    )
-    val state by viewModel.uiState.collectAsState()
-    val shop = state.shop
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = shop?.name ?: "দোকান",
-                onBack = onBack,
-                actions = {
-                    IconButton(onClick = { onEdit(shopId) }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "দোকান সম্পাদনা")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    if (state.duePoisha >= 0) {
-                        Text("বর্তমান বকেয়া", style = MaterialTheme.typography.bodyMedium)
-                        AmountText(
-                            state.duePoisha,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = if (state.duePoisha > 0) Amber700 else MaterialTheme.colorScheme.onSurface
-                        )
-                    } else {
-                        Text("দোকানে আপনার অগ্রিম আছে", style = MaterialTheme.typography.bodyMedium)
-                        AmountText(
-                            -state.duePoisha,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    shop?.let {
-                        Spacer(Modifier.height(6.dp))
-                        it.merchantName?.let { v -> KvRow("দোকানদার", v) }
-                        it.phone?.let { v -> KvRow("মোবাইল", BengaliNumber.toBengaliDigits(v)) }
-                        it.address?.let { v -> KvRow("ঠিকানা", v) }
-                        it.shopType?.let { v -> KvRow("ধরন", v) }
-                        it.note?.let { v -> KvRow("মন্তব্য", v) }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(onClick = { onNewPurchase(shopId) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Filled.ShoppingCart, contentDescription = null)
-                            Text("  নতুন ক্রয়")
-                        }
-                        OutlinedButton(onClick = { onNewPayment(shopId) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Filled.Payments, contentDescription = null)
-                            Text("  পরিশোধ")
-                        }
-                    }
-                }
-            }
-            Text(
-                "দোকানের খাতা (লেনদেনের ইতিহাস)",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-            if (state.transactions.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.Storefront,
-                    title = "এখনো কোনো লেনদেন নেই",
-                    subtitle = "নতুন ক্রয় যোগ করলে এখানে দেখা যাবে।"
-                )
-            } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(state.transactions, key = { it.id }) { txn ->
-                        TransactionRow(txn, onClick = { onOpenTransaction(txn.id) })
-                        HorizontalDivider(Modifier.padding(start = 70.dp))
-                    }
-                }
-            }
-        }
-    }
 }
 
 /** Opening-due editor helper re-exported for tests. */

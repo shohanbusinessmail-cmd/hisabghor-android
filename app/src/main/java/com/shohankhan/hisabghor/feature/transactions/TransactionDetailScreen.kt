@@ -64,6 +64,33 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import com.shohankhan.hisabghor.core.designsystem.AmountText
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
+import com.shohankhan.hisabghor.core.designsystem.SummaryRow
 
 data class PostingLine(val ledgerLabel: String, val signedAmountPoisha: Long)
 
@@ -231,186 +258,224 @@ fun TransactionDetailScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = "লেনদেনের বিবরণ",
-                onBack = onBack,
-                actions = {
-                    val route = txn?.takeIf { it.voidedAt == null }?.editRoute()
-                    if (route != null) {
-                        IconButton(onClick = { onNavigate(route) }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "সম্পাদনা করুন")
-                        }
-                    }
+    HgScreen(
+        title = "লেনদেনের বিবরণ",
+        onBack = onBack,
+        actions = {
+            val route = txn?.takeIf { it.voidedAt == null }?.editRoute()
+            if (route != null) {
+                IconButton(onClick = { onNavigate(route) }) {
+                    Icon(Icons.Filled.Edit, contentDescription = "সম্পাদনা করুন", tint = Hg.colors.ink)
                 }
-            )
+            }
         }
     ) { padding ->
         when {
             state.loading -> LoadingState(Modifier.padding(padding))
-            txn == null -> Column(Modifier.padding(padding).padding(16.dp)) {
-                Text("লেনদেনটি পাওয়া যায়নি।")
-            }
-            else -> Column(
+            txn == null -> EmptyDetail(Modifier.padding(padding))
+            else -> androidx.compose.foundation.layout.Column(
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = ScreenPadding)
             ) {
+                Spacer(Modifier.height(Space.md))
                 if (txn.voidedAt != null) {
-                    Card(Modifier.fillMaxWidth()) {
-                        Text(
-                            "এই লেনদেনটি বাতিল করা হয়েছে — এটি আর কোনো হিসাবে ধরা হয় না।",
-                            Modifier.padding(14.dp),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
+                    HgNotice(
+                        title = "এই লেনদেনটি বাতিল করা হয়েছে",
+                        message = "বাতিল লেনদেন আর ব্যালান্স, বাজেট বা রিপোর্টে ধরা হয় না।",
+                        tone = HgTone.Expense,
+                        icon = Icons.Filled.Warning
+                    )
+                    Spacer(Modifier.height(Space.md))
                 }
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(txn.title, style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            formatAmount(kotlin.math.abs(txn.amountPoisha)),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        KvRow("ধরন", txn.kind.bnLabel())
-                        KvRow("তারিখ", Dates.formatDateTime(txn.occurredAt))
-                        state.accountName?.let { KvRow("অ্যাকাউন্ট", it) }
-                        state.counterAccountName?.let { KvRow("অপর অ্যাকাউন্ট", it) }
-                        state.categoryName?.let { KvRow("ক্যাটাগরি", it) }
-                        state.shopName?.let { KvRow("দোকান", it) }
-                        state.partyName?.let { KvRow("ব্যক্তি", it) }
-                        state.loanName?.let { KvRow("ঋণ/চুক্তি", it) }
-                        if (txn.feePoisha > 0) KvRow("ফি/চার্জ", formatAmount(txn.feePoisha))
-                        if (txn.discountPoisha > 0) KvRow("ছাড়", formatAmount(txn.discountPoisha))
-                        if (txn.extraChargePoisha > 0) KvRow("অতিরিক্ত চার্জ", formatAmount(txn.extraChargePoisha))
-                        txn.receiptNo?.let { KvRow("রসিদ নম্বর", BengaliNumber.toBengaliDigits(it)) }
-                        txn.note?.let { KvRow("মন্তব্য", it) }
-                    }
+
+                // Hero: amount + identity
+                Column(Modifier.fillMaxWidth().padding(vertical = Space.sm)) {
+                    Eyebrow(txn.kind.bnLabel())
+                    Spacer(Modifier.height(Space.xs))
+                    AmountText(
+                        kotlin.math.abs(txn.amountPoisha),
+                        style = HgAmountType.hero,
+                        color = if (txn.voidedAt != null) Hg.colors.inkTertiary else Hg.colors.ink
+                    )
+                    Spacer(Modifier.height(Space.xs))
+                    Text(
+                        txn.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Hg.colors.ink
+                    )
+                    Text(
+                        Dates.formatDateTime(txn.occurredAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                }
+
+                HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                    SummaryLine("ধরন", txn.kind.bnLabel())
+                    state.accountName?.let { SummaryLine("অ্যাকাউন্ট", it) }
+                    state.counterAccountName?.let { SummaryLine("অপর অ্যাকাউন্ট", it) }
+                    state.categoryName?.let { SummaryLine("ক্যাটাগরি", it) }
+                    state.shopName?.let { SummaryLine("দোকান", it) }
+                    state.partyName?.let { SummaryLine("ব্যক্তি", it) }
+                    state.loanName?.let { SummaryLine("ঋণ/চুক্তি", it) }
+                    if (txn.feePoisha > 0) SummaryLine("ফি/চার্জ", formatAmount(txn.feePoisha))
+                    if (txn.discountPoisha > 0) SummaryLine("ছাড়", formatAmount(txn.discountPoisha))
+                    if (txn.extraChargePoisha > 0) SummaryLine("অতিরিক্ত চার্জ", formatAmount(txn.extraChargePoisha))
+                    txn.receiptNo?.let { SummaryLine("রসিদ নম্বর", BengaliNumber.toBengaliDigits(it)) }
+                    txn.note?.takeIf { it.isNotBlank() }?.let { SummaryLine("মন্তব্য", it) }
                 }
 
                 if (state.items.isNotEmpty()) {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text("পণ্যের তালিকা", style = MaterialTheme.typography.titleMedium)
-                            Spacer(Modifier.height(6.dp))
-                            state.items.forEach { item ->
-                                Row(
-                                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(item.name)
-                                        Text(
-                                            "${BengaliNumber.formatQuantityMilli(item.quantityMilli)} ${item.unit ?: ""} × ${formatAmount(item.unitPricePoisha)}" +
-                                                if (item.discountPoisha > 0) " − ছাড় ${formatAmount(item.discountPoisha)}" else "",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Text(formatAmount(item.lineTotalPoisha))
-                                }
-                                HorizontalDivider()
-                            }
-                        }
-                    }
-                }
-
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("হিসাবের খাতায় প্রভাব", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(4.dp))
-                        state.postingLines.forEach { line ->
-                            KvRow(
-                                line.ledgerLabel,
-                                (if (line.signedAmountPoisha >= 0) "+" else "−") +
-                                    formatAmount(kotlin.math.abs(line.signedAmountPoisha))
-                            )
-                        }
-                        Text(
-                            "সব খাতার যোগফল সবসময় শূন্য — এটাই দ্বৈত হিসাব (double-entry) পদ্ধতির নিয়ম।",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("রসিদ/সংযুক্তি", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(6.dp))
-                        state.attachments.forEach { attachment ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        val file = viewModel.receiptFile(attachment)
-                                        if (file.exists()) {
-                                            val uri = FileProvider.getUriForFile(
-                                                context,
-                                                "${context.packageName}.fileprovider",
-                                                file
-                                            )
-                                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(uri, attachment.mimeType ?: "*/*")
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            runCatching { context.startActivity(intent) }
-                                        }
-                                    }
-                                    .padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row {
-                                    Icon(Icons.Filled.AttachFile, contentDescription = null)
-                                    Spacer(Modifier.height(0.dp))
+                    Spacer(Modifier.height(Space.md))
+                    HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                        SectionLabel("পণ্যের তালিকা")
+                        state.items.forEach { item ->
+                            Column(Modifier.padding(horizontal = Space.lg, vertical = Space.sm)) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        "  ${attachment.fileName}",
-                                        style = MaterialTheme.typography.bodyMedium
+                                        item.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Hg.colors.ink,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        formatAmount(item.lineTotalPoisha),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Hg.colors.ink
                                     )
                                 }
+                                Text(
+                                    "${BengaliNumber.formatQuantityMilli(item.quantityMilli)} ${item.unit ?: ""} × " +
+                                        formatAmount(item.unitPricePoisha) +
+                                        if (item.discountPoisha > 0) " − ছাড় ${formatAmount(item.discountPoisha)}" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Hg.colors.inkSecondary
+                                )
+                            }
+                            HgDivider(startInset = 20)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(Space.md))
+                HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                    SectionLabel("হিসাবের খাতায় প্রভাব")
+                    state.postingLines.forEach { line ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Space.lg, vertical = Space.xs),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                line.ledgerLabel,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Hg.colors.inkSecondary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                (if (line.signedAmountPoisha >= 0) "+" else "−") +
+                                    formatAmount(kotlin.math.abs(line.signedAmountPoisha)),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (line.signedAmountPoisha >= 0) Hg.colors.ink else Hg.colors.inkSecondary
+                            )
+                        }
+                    }
+                    Text(
+                        "সব খাতার যোগফল সবসময় শূন্য — এটাই দ্বৈত হিসাব (double-entry) পদ্ধতির নিয়ম।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkTertiary,
+                        modifier = Modifier.padding(horizontal = Space.lg, vertical = Space.sm)
+                    )
+                }
+
+                Spacer(Modifier.height(Space.md))
+                HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                    SectionLabel("রসিদ ও সংযুক্তি")
+                    state.attachments.forEach { attachment ->
+                        HgListRow(
+                            title = attachment.fileName,
+                            subtitle = attachment.mimeType ?: "ফাইল",
+                            leading = {
+                                IconChip(
+                                    Icons.Filled.AttachFile,
+                                    tint = Hg.colors.brand,
+                                    background = Hg.colors.brandTint
+                                )
+                            },
+                            trailing = {
                                 IconButton(onClick = { attachmentToDelete = attachment }) {
-                                    Icon(Icons.Filled.Delete, contentDescription = "সংযুক্তি মুছুন")
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = "সংযুক্তি মুছুন",
+                                        tint = Hg.colors.inkSecondary
+                                    )
+                                }
+                            },
+                            onClick = {
+                                val file = viewModel.receiptFile(attachment)
+                                if (file.exists()) {
+                                    val uri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        file
+                                    )
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(uri, attachment.mimeType ?: "*/*")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    runCatching { context.startActivity(intent) }
                                 }
                             }
-                        }
-                        OutlinedButton(onClick = {
-                            documentPicker.launch(arrayOf("image/*", "application/pdf"))
-                        }) {
-                            Text("রসিদের ছবি/PDF যোগ করুন")
-                        }
+                        )
+                    }
+                    if (state.attachments.isEmpty()) {
+                        Text(
+                            "এখনো কোনো রসিদ সংযুক্ত করা হয়নি।",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkSecondary,
+                            modifier = Modifier.padding(horizontal = Space.lg, vertical = Space.sm)
+                        )
+                    }
+                    TextButton(
+                        onClick = { documentPicker.launch(arrayOf("image/*", "application/pdf")) },
+                        modifier = Modifier.padding(horizontal = Space.sm)
+                    ) {
+                        Icon(Icons.Filled.AttachFile, contentDescription = null, tint = Hg.colors.brand)
+                        Spacer(Modifier.size(Space.xs))
+                        Text("রসিদের ছবি বা PDF যোগ করুন", color = Hg.colors.brand)
                     }
                 }
 
                 if (txn.voidedAt == null) {
+                    Spacer(Modifier.height(Space.lg))
                     val editRoute = txn.editRoute()
                     if (editRoute != null) {
-                        Button(
+                        HgButton(
+                            text = "সম্পাদনা করুন",
                             onClick = { onNavigate(editRoute) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("সম্পাদনা করুন") }
+                            modifier = Modifier.fillMaxWidth(),
+                            icon = Icons.Filled.Edit
+                        )
                     } else {
-                        Text(
-                            "এই ধরনের লেনদেন সরাসরি সম্পাদনা করা যায় না। ভুল থাকলে বাতিল করে নতুন করে লিখুন।",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        HgNotice(
+                            title = "সরাসরি সম্পাদনা করা যায় না",
+                            message = "এই ধরনের লেনদেন সংশ্লিষ্ট স্ক্রিন থেকে বদলাতে হবে। ভুল থাকলে বাতিল করে নতুন করে লিখুন।",
+                            tone = HgTone.Neutral
                         )
                     }
-                    OutlinedButton(
+                    Spacer(Modifier.height(Space.sm))
+                    HgButton(
+                        text = "লেনদেন বাতিল করুন",
                         onClick = { showVoidConfirm = true },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
+                        style = HgButtonStyle.Secondary,
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("লেনদেন বাতিল করুন") }
+                    )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(Space.xxl))
             }
         }
     }
@@ -443,5 +508,58 @@ fun TransactionDetailScreen(
             },
             onDismiss = { attachmentToDelete = null }
         )
+    }
+}
+
+@Composable
+private fun SummaryLine(label: String, value: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Space.lg, vertical = Space.sm)
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.inkSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.ink,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1.4f)
+        )
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = Hg.colors.inkSecondary,
+        modifier = Modifier.padding(horizontal = Space.lg, vertical = Space.sm)
+    )
+}
+
+@Composable
+private fun EmptyDetail(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Filled.ReceiptLong,
+                contentDescription = null,
+                tint = Hg.colors.inkTertiary,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(Modifier.height(Space.sm))
+            Text(
+                "লেনদেনটি পাওয়া যায়নি।",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Hg.colors.inkSecondary
+            )
+        }
     }
 }

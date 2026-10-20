@@ -47,6 +47,22 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 data class ShopPaymentUiState(
     val loading: Boolean = true,
@@ -162,51 +178,63 @@ fun ShopPaymentScreen(
     val state by viewModel.state.collectAsState()
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
 
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (editId > 0) "পরিশোধ সম্পাদনা" else "বকেয়া পরিশোধ — ${state.shopName}",
-                onBack = onBack
-            )
+    HgScreen(
+        title = if (editId > 0) "পরিশোধ সম্পাদনা" else "বকেয়া পরিশোধ",
+        subtitle = state.shopName.ifBlank { null },
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = if (state.saving) "হচ্ছে…" else "পরিশোধ করুন",
+                    onClick = viewModel::save,
+                    enabled = !state.saving,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     ) { padding ->
         if (state.loading) {
             LoadingState(Modifier.padding(padding))
-            return@Scaffold
+            return@HgScreen
         }
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = ScreenPadding)
         ) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp)) {
-                    Text("বর্তমান বকেয়া", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        formatAmount(state.currentDuePoisha),
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Text(
-                        "পরিশোধ করলে শুধু বকেয়া কমবে — নতুন করে খরচ ধরা হবে না।",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            Spacer(Modifier.height(Space.md))
+            HgCard(padding = androidx.compose.foundation.layout.PaddingValues(Space.lg)) {
+                Eyebrow("বর্তমান বকেয়া")
+                Spacer(Modifier.height(Space.xs))
+                Text(
+                    formatAmount(state.currentDuePoisha),
+                    style = HgAmountType.large,
+                    color = if (state.currentDuePoisha > 0) Hg.colors.warning else Hg.colors.ink
+                )
+                Spacer(Modifier.height(Space.xs))
+                Text(
+                    "পরিশোধ করলে শুধু বকেয়া কমবে — নতুন করে খরচ ধরা হবে না।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary
+                )
+                if (state.currentDuePoisha > 0) {
+                    Spacer(Modifier.height(Space.md))
+                    HgButton(
+                        text = "পুরো বকেয়া বসিয়ে দিন",
+                        onClick = viewModel::fillFullDue,
+                        style = HgButtonStyle.Secondary
                     )
                 }
             }
-            MoneyInputField(
+            Spacer(Modifier.height(Space.lg))
+            HgAmountInput(
                 value = state.amountText,
                 onValueChange = { v -> viewModel.update { it.copy(amountText = v) } },
-                label = "পরিশোধের পরিমাণ (টাকা)",
                 error = state.error
             )
-            if (state.currentDuePoisha > 0) {
-                OutlinedButton(onClick = viewModel::fillFullDue) {
-                    Text("পুরো বকেয়াটা বসিয়ে দিন")
-                }
-            }
+            Spacer(Modifier.height(Space.lg))
             SelectionField(
                 label = "যে অ্যাকাউন্ট থেকে দিলেন",
                 selectedText = state.accounts.firstOrNull { it.id == state.accountId }?.name ?: "বেছে নিন",
@@ -214,25 +242,25 @@ fun ShopPaymentScreen(
                 optionLabel = { it.name },
                 onSelect = { selected -> viewModel.update { it.copy(accountId = selected.id) } }
             )
+            Spacer(Modifier.height(Space.md))
             DateField(
                 date = state.date,
                 onDateChange = { v -> viewModel.update { it.copy(date = v) } },
                 label = "তারিখ"
             )
-            OutlinedTextField(
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
                 value = state.note,
                 onValueChange = { v -> viewModel.update { it.copy(note = v) } },
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
+                label = "মন্তব্য (ঐচ্ছিক)"
             )
-            Button(
-                onClick = viewModel::save,
-                enabled = !state.saving,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (state.saving) "হচ্ছে…" else "পরিশোধ করুন")
-            }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Space.lg))
+            HgNotice(
+                title = "খরচ আগেই ধরা হয়েছে",
+                message = "বাকি কেনার সময় পুরো টাকা খরচ হিসেবে গণনা হয়েছে। এই পরিশোধ শুধু দেনা কমায়।",
+                tone = HgTone.Neutral
+            )
+            Spacer(Modifier.height(Space.xxl))
         }
     }
 }

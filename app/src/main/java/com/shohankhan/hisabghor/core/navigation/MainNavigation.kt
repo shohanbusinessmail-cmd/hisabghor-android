@@ -1,9 +1,15 @@
 package com.shohankhan.hisabghor.core.navigation
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
@@ -29,6 +35,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgNavItem
 import com.shohankhan.hisabghor.feature.accounts.AccountDetailScreen
 import com.shohankhan.hisabghor.feature.accounts.AccountEditorScreen
 import com.shohankhan.hisabghor.feature.accounts.AccountListScreen
@@ -126,14 +135,16 @@ object Routes {
         "savings_move?goalId=$goalId&accountId=$accountId&withdraw=$withdraw&editId=$editId"
 }
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector)
-
+/**
+ * Primary destinations. Five is the practical maximum for a bottom bar in
+ * Bengali: labels stay single-line on 320 dp-wide screens.
+ */
 private val tabs = listOf(
-    Tab(Routes.Dashboard, "হোম", Icons.Filled.Home),
-    Tab(Routes.Transactions, "লেনদেন", Icons.Filled.ReceiptLong),
-    Tab(Routes.Reports, "রিপোর্ট", Icons.Filled.BarChart),
-    Tab(Routes.Accounts, "অ্যাকাউন্ট", Icons.Filled.AccountBalanceWallet),
-    Tab(Routes.More, "আরও", Icons.Filled.Apps)
+    HgNavItem(Routes.Dashboard, "হোম", Icons.Outlined.Home, Icons.Filled.Home),
+    HgNavItem(Routes.Transactions, "লেনদেন", Icons.Outlined.ReceiptLong, Icons.Filled.ReceiptLong),
+    HgNavItem(Routes.Accounts, "হিসাব", Icons.Outlined.AccountBalanceWallet, Icons.Filled.AccountBalanceWallet),
+    HgNavItem(Routes.Reports, "রিপোর্ট", Icons.Outlined.BarChart, Icons.Filled.BarChart),
+    HgNavItem(Routes.More, "আরও", Icons.Outlined.Apps, Icons.Filled.Apps)
 )
 
 @Composable
@@ -146,25 +157,23 @@ fun MainNavigation() {
     }
 
     Scaffold(
+        containerColor = Hg.colors.canvas,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    tabs.forEach { tab ->
-                        val selected = currentDestination?.hierarchy?.any { it.route == tab.route } == true
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) }
-                        )
+                HgBottomBar(
+                    items = tabs,
+                    currentRoute = tabs.firstOrNull { tab ->
+                        currentDestination?.hierarchy?.any { it.route == tab.route } == true
+                    }?.route,
+                    onSelect = { route ->
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         }
     ) { innerPadding ->

@@ -1,43 +1,85 @@
 package com.shohankhan.hisabghor.core.designsystem
 
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
-// Premium white + emerald identity (light mode only, by product decision).
-val Emerald600 = Color(0xFF0B7A4B)
-val Emerald700 = Color(0xFF065C38)
-val Emerald500 = Color(0xFF11998E)
-val Emerald50 = Color(0xFFE8F6F0)
-val Ink900 = Color(0xFF14201A)
-val Ink600 = Color(0xFF4A5A52)
-val Danger600 = Color(0xFFC62828)
-val Amber700 = Color(0xFFB26A00)
+/**
+ * HisabGhor theme — light only, by product decision.
+ *
+ * The Material colour scheme is populated from the brand roles in
+ * [HgColors] so that stock Material 3 components inherit the identity
+ * instead of looking like a default template. All custom surfaces read
+ * colours through [LocalHgColors].
+ */
+private val C = HgColors.Light
 
-private val LightColors = lightColorScheme(
-    primary = Emerald600,
+private val HisabGhorColorScheme = lightColorScheme(
+    primary = C.brand,
     onPrimary = Color.White,
-    primaryContainer = Emerald50,
-    onPrimaryContainer = Emerald700,
-    secondary = Emerald500,
+    primaryContainer = C.brandTint,
+    onPrimaryContainer = C.onBrandTint,
+    inversePrimary = Color(0xFF6FD5AE),
+
+    secondary = C.brandDeep,
     onSecondary = Color.White,
-    background = Color.White,
-    onBackground = Ink900,
-    surface = Color.White,
-    onSurface = Ink900,
-    surfaceVariant = Color(0xFFF2F7F4),
-    onSurfaceVariant = Ink600,
-    error = Danger600,
+    secondaryContainer = C.surfaceMuted,
+    onSecondaryContainer = C.ink,
+
+    tertiary = C.info,
+    onTertiary = Color.White,
+    tertiaryContainer = C.infoTint,
+    onTertiaryContainer = C.info,
+
+    background = C.canvas,
+    onBackground = C.ink,
+    surface = C.surface,
+    onSurface = C.ink,
+    surfaceVariant = C.surfaceMuted,
+    onSurfaceVariant = C.inkSecondary,
+    surfaceTint = C.brand,
+
+    inverseSurface = C.ink,
+    inverseOnSurface = C.canvas,
+
+    error = C.expense,
     onError = Color.White,
-    outline = Color(0xFFC8D8CF)
+    errorContainer = C.expenseTint,
+    onErrorContainer = C.expense,
+
+    outline = C.hairlineStrong,
+    outlineVariant = C.hairline,
+    scrim = C.scrim,
+
+    surfaceBright = C.surface,
+    surfaceDim = C.surfaceSunken,
+    surfaceContainerLowest = C.surface,
+    surfaceContainerLow = Color(0xFFFAFCFA),
+    surfaceContainer = C.surfaceMuted,
+    surfaceContainerHigh = C.surfaceSunken,
+    surfaceContainerHighest = Color(0xFFE1E9E3)
+)
+
+private val HisabGhorSelectionColors = TextSelectionColors(
+    handleColor = C.brand,
+    backgroundColor = C.brandTint.copy(alpha = 0.75f)
 )
 
 @Composable
 fun HisabGhorTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = LightColors,
-        typography = HisabGhorTypography,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalHgColors provides C,
+        LocalTextSelectionColors provides HisabGhorSelectionColors
+    ) {
+        MaterialTheme(
+            colorScheme = HisabGhorColorScheme,
+            typography = HisabGhorTypography,
+            shapes = HgShapes,
+            content = content
+        )
+    }
 }
