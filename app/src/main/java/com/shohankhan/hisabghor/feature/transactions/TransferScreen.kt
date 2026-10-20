@@ -44,6 +44,37 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
+import com.shohankhan.hisabghor.core.designsystem.formatAmount
 
 data class TransferUiState(
     val loading: Boolean = true,
@@ -176,60 +207,96 @@ fun TransferScreen(
 
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
 
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (editId > 0) "ট্রান্সফার সম্পাদনা" else "অ্যাকাউন্ট ট্রান্সফার",
-                onBack = onBack
-            )
+    HgScreen(
+        title = if (editId > 0) "ট্রান্সফার সম্পাদনা" else "টাকা স্থানান্তর",
+        subtitle = "এক অ্যাকাউন্ট থেকে আরেকটিতে",
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = if (state.saving) "হচ্ছে…" else "ট্রান্সফার করুন",
+                    onClick = viewModel::save,
+                    enabled = !state.saving,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     ) { padding ->
         if (state.loading) {
             LoadingState(Modifier.padding(padding))
-            return@Scaffold
+            return@HgScreen
         }
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = ScreenPadding)
         ) {
-            Text(
-                "নিজের এক অ্যাকাউন্ট থেকে আরেক অ্যাকাউন্টে টাকা সরানো আয় বা খরচ নয় — শুধু ফি থাকলে তা খরচ হিসেবে ধরা হবে।",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            SelectionField(
-                label = "যেখান থেকে (From)",
-                selectedText = state.accounts.firstOrNull { it.id == state.fromAccountId }?.name ?: "বেছে নিন",
-                options = state.accounts,
-                optionLabel = { it.name },
-                onSelect = { viewModel.setFrom(it.id) },
-                error = state.errors["from"]
-            )
-            SelectionField(
-                label = "যেখানে যাবে (To)",
-                selectedText = state.accounts.firstOrNull { it.id == state.toAccountId }?.name ?: "বেছে নিন",
-                options = state.accounts,
-                optionLabel = { it.name },
-                onSelect = { viewModel.setTo(it.id) },
-                error = state.errors["to"]
-            )
-            MoneyInputField(
+            Spacer(Modifier.height(Space.md))
+            HgCard(padding = androidx.compose.foundation.layout.PaddingValues(Space.lg)) {
+                Eyebrow("যেখান থেকে")
+                Spacer(Modifier.height(Space.xs))
+                SelectionField(
+                    label = "অ্যাকাউন্ট",
+                    selectedText = state.accounts.firstOrNull { it.id == state.fromAccountId }?.name ?: "বেছে নিন",
+                    options = state.accounts,
+                    optionLabel = { it.name },
+                    onSelect = { viewModel.setFrom(it.id) },
+                    error = state.errors["from"]
+                )
+                Box(Modifier.fillMaxWidth().padding(vertical = Space.xs), contentAlignment = Alignment.Center) {
+                    IconButton(
+                        onClick = {
+                            val from = state.fromAccountId
+                            val to = state.toAccountId
+                            if (from != null && to != null) {
+                                viewModel.setFrom(to)
+                                viewModel.setTo(from)
+                            }
+                        },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Hg.colors.brandTint)
+                    ) {
+                        Icon(
+                            Icons.Filled.SwapVert,
+                            contentDescription = "উৎস ও গন্তব্য বদলান",
+                            tint = Hg.colors.brand
+                        )
+                    }
+                }
+                Eyebrow("যেখানে যাবে")
+                Spacer(Modifier.height(Space.xs))
+                SelectionField(
+                    label = "অ্যাকাউন্ট",
+                    selectedText = state.accounts.firstOrNull { it.id == state.toAccountId }?.name ?: "বেছে নিন",
+                    options = state.accounts,
+                    optionLabel = { it.name },
+                    onSelect = { viewModel.setTo(it.id) },
+                    error = state.errors["to"]
+                )
+            }
+
+            Spacer(Modifier.height(Space.lg))
+            HgAmountInput(
                 value = state.amountText,
                 onValueChange = viewModel::setAmount,
-                label = "পরিমাণ (টাকা)",
                 error = state.errors["amount"]
             )
-            MoneyInputField(
+
+            Spacer(Modifier.height(Space.lg))
+            HgTextField(
                 value = state.feeText,
                 onValueChange = viewModel::setFee,
                 label = "ফি/চার্জ (যদি থাকে)",
+                placeholder = "০",
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                 error = state.errors["fee"]
             )
             if ((BengaliNumber.parsePoisha(state.feeText) ?: 0L) > 0) {
+                Spacer(Modifier.height(Space.md))
                 SelectionField(
                     label = "ফির ক্যাটাগরি",
                     selectedText = state.expenseCategories.firstOrNull { it.id == state.feeCategoryId }?.name ?: "বেছে নিন",
@@ -239,22 +306,26 @@ fun TransferScreen(
                     error = state.errors["feeCategory"]
                 )
             }
+            Spacer(Modifier.height(Space.md))
             DateField(date = state.date, onDateChange = viewModel::setDate, label = "তারিখ")
-            OutlinedTextField(
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
                 value = state.note,
                 onValueChange = viewModel::setNote,
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
+                label = "মন্তব্য (ঐচ্ছিক)"
             )
-            state.errors["save"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(
-                onClick = viewModel::save,
-                enabled = !state.saving,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (state.saving) "হচ্ছে…" else "ট্রান্সফার করুন")
+
+            Spacer(Modifier.height(Space.lg))
+            HgNotice(
+                title = "ট্রান্সফার আয় বা খরচ নয়",
+                message = "শুধু ফি থাকলে তা খরচ হিসেবে ধরা হবে। মোট ব্যালেন্স অপরিবর্তিত থাকবে।",
+                tone = HgTone.Neutral
+            )
+            state.errors["save"]?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Space.xxl))
         }
     }
 }

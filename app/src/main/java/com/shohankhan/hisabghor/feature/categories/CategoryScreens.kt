@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -75,6 +76,29 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.TextButton
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.FormSectionLabel
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgBadge
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgChip
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 // ---------------- list ----------------
 
@@ -104,77 +128,272 @@ fun CategoryListScreen(
     val showArchived by viewModel.showArchived.collectAsState()
     val items by viewModel.items.collectAsState()
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "ক্যাটাগরি", onBack = onBack) },
+    HgScreen(
+        title = "ক্যাটাগরি",
+        subtitle = "আয় ও খরচের শ্রেণি",
+        onBack = onBack,
+        insetBottom = false,
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddCategory) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন ক্যাটাগরি")
-            }
+            ExtendedFloatingActionButton(
+                onClick = onAddCategory,
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন", style = MaterialTheme.typography.labelLarge) }
+            )
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = if (kind == CategoryKind.EXPENSE) 0 else 1) {
-                Tab(
-                    selected = kind == CategoryKind.EXPENSE,
-                    onClick = { viewModel.kind.value = CategoryKind.EXPENSE },
-                    text = { Text("খরচের ক্যাটাগরি") }
-                )
-                Tab(
-                    selected = kind == CategoryKind.INCOME,
-                    onClick = { viewModel.kind.value = CategoryKind.INCOME },
-                    text = { Text("আয়ের ক্যাটাগরি") }
+            Box(Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)) {
+                HgSegmented(
+                    options = CategoryKind.entries.toList(),
+                    selected = kind,
+                    label = { if (it == CategoryKind.EXPENSE) "খরচের ক্যাটাগরি" else "আয়ের ক্যাটাগরি" },
+                    onSelect = { viewModel.kind.value = it }
                 )
             }
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                FilterChip(
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = ScreenPadding, vertical = Space.xs),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "${BengaliNumber.formatCount(items.size.toLong())}টি ক্যাটাগরি",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+                HgChip(
+                    text = "আর্কাইভ দেখান",
                     selected = showArchived,
-                    onClick = { viewModel.showArchived.value = !showArchived },
-                    label = { Text("আর্কাইভ করাগুলোও দেখান") }
+                    onClick = { viewModel.showArchived.value = !showArchived }
                 )
             }
             if (items.isEmpty()) {
-                EmptyState(
+                com.shohankhan.hisabghor.core.designsystem.EmptyState(
                     icon = Icons.Filled.Category,
                     title = "এই ধরনের কোনো ক্যাটাগরি নেই",
+                    subtitle = "নিজের প্রয়োজন অনুযায়ী ক্যাটাগরি তৈরি করুন।",
                     actionLabel = "ক্যাটাগরি যোগ করুন",
                     onAction = onAddCategory
                 )
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(items, key = { it.id }) { category ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onEditCategory(category.id) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 96.dp)
+                ) {
+                    item {
+                        HgCard(
+                            Modifier.padding(horizontal = ScreenPadding, vertical = Space.xs),
+                            padding = PaddingValues(vertical = Space.xs)
                         ) {
-                            Box(
-                                Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(colorFromHex(category.colorHex).copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    iconForKey(category.iconKey),
-                                    contentDescription = null,
-                                    tint = colorFromHex(category.colorHex)
+                            items.forEachIndexed { index, category ->
+                                HgListRow(
+                                    title = category.name,
+                                    subtitle = if (category.archivedAt != null) "আর্কাইভ করা" else null,
+                                    leading = {
+                                        IconChip(
+                                            icon = iconForKey(category.iconKey),
+                                            tint = colorFromHex(category.colorHex),
+                                            background = colorFromHex(category.colorHex).copy(alpha = 0.14f)
+                                        )
+                                    },
+                                    onClick = { onEditCategory(category.id) }
                                 )
+                                if (index != items.lastIndex) HgDivider(startInset = 68)
                             }
-                            Spacer(Modifier.height(0.dp))
-                            Text(
-                                category.name + if (category.archivedAt != null) " (আর্কাইভ)" else "",
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 12.dp)
-                            )
                         }
-                        HorizontalDivider(Modifier.padding(start = 68.dp))
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+fun CategoryEditorScreen(
+    editId: Long,
+    onBack: () -> Unit,
+    onSaved: () -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: CategoryEditorViewModel = viewModel(
+        key = "category_editor_$editId",
+        factory = hisabViewModelFactory { CategoryEditorViewModel(editId, container.categoryRepository) }
+    )
+    val state by viewModel.state.collectAsState()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.saved, state.deleted) {
+        if (state.saved || state.deleted) onSaved()
+    }
+
+    HgScreen(
+        title = if (state.isEdit) "ক্যাটাগরি সম্পাদনা" else "নতুন ক্যাটাগরি",
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = "সংরক্ষণ করুন",
+                    onClick = viewModel::save,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = ScreenPadding)
+        ) {
+            Spacer(Modifier.height(Space.md))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconChip(
+                    iconForKey(state.iconKey),
+                    tint = colorFromHex(state.colorHex),
+                    background = colorFromHex(state.colorHex).copy(alpha = 0.14f),
+                    size = 52
+                )
+                Spacer(Modifier.width(Space.md))
+                HgTextField(
+                    value = state.name,
+                    onValueChange = viewModel::setName,
+                    label = "ক্যাটাগরির নাম",
+                    placeholder = "যেমন: বাচ্চাদের পড়াশোনা",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            if (!state.isEdit) {
+                Spacer(Modifier.height(Space.md))
+                FormSectionLabel("ধরন")
+                HgSegmented(
+                    options = CategoryKind.entries.toList(),
+                    selected = state.kind,
+                    label = { it.bnLabel() },
+                    onSelect = viewModel::setKind
+                )
+            }
+
+            Spacer(Modifier.height(Space.lg))
+            FormSectionLabel("আইকন", helper = "সর্বোচ্চ যতটা দরকার ততটাই — সহজে চেনা যায় এমন আইকন বেছে নিন")
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(6),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(196.dp),
+                horizontalArrangement = Arrangement.spacedBy(Space.sm),
+                verticalArrangement = Arrangement.spacedBy(Space.sm)
+            ) {
+                items(iconOptions) { (key, icon) ->
+                    val selected = state.iconKey == key
+                    Box(
+                        Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (selected) colorFromHex(state.colorHex).copy(alpha = 0.18f)
+                                else Hg.colors.surfaceMuted
+                            )
+                            .border(
+                                width = if (selected) 2.dp else 0.dp,
+                                color = if (selected) colorFromHex(state.colorHex) else Color.Transparent,
+                                shape = CircleShape
+                            )
+                            .clickable { viewModel.setIcon(key) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(icon, contentDescription = key, tint = colorFromHex(state.colorHex))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(Space.md))
+            FormSectionLabel("রং")
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                categoryColorOptions.take(6).forEach { color -> ColorDot(color, state, viewModel) }
+            }
+            Spacer(Modifier.height(Space.sm))
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                categoryColorOptions.drop(6).forEach { color -> ColorDot(color, state, viewModel) }
+            }
+
+            state.message?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
+            }
+
+            if (state.isEdit) {
+                Spacer(Modifier.height(Space.lg))
+                HgDivider()
+                Spacer(Modifier.height(Space.md))
+                Text(
+                    "এই ক্যাটাগরিতে ${BengaliNumber.formatCount(state.usageCount.toLong())}টি হিসাব-এন্ট্রি আছে।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary
+                )
+                Spacer(Modifier.height(Space.sm))
+                HgButton(
+                    text = if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "আর্কাইভ করুন",
+                    onClick = { viewModel.setArchived(!state.archived) },
+                    style = HgButtonStyle.Secondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(Space.sm))
+                HgButton(
+                    text = "স্থায়ীভাবে মুছুন",
+                    onClick = { showDeleteConfirm = true },
+                    style = HgButtonStyle.Ghost,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    "লেনদেন থাকলে মুছে ফেলা যাবে না — ইতিহাস রক্ষার জন্য আর্কাইভ করুন।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkTertiary
+                )
+            }
+            Spacer(Modifier.height(Space.xxl))
+        }
+    }
+
+    if (showDeleteConfirm) {
+        ConfirmDialog(
+            title = "ক্যাটাগরি মুছে ফেলবেন?",
+            message = "এটি আর ফেরত আনা যাবে না। (লেনদেন থাকলে মোছা হবে না।)",
+            confirmText = "মুছে ফেলুন",
+            destructive = true,
+            onConfirm = {
+                viewModel.delete()
+                showDeleteConfirm = false
+            },
+            onDismiss = { showDeleteConfirm = false }
+        )
+    }
+}
+
+@Composable
+private fun ColorDot(color: Color, state: CategoryEditorUiState, viewModel: CategoryEditorViewModel) {
+    val hex = color.toArgb().toLong() and 0xFFFFFFFFL
+    val selected = state.colorHex == hex
+    Box(
+        Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(color)
+            .border(
+                width = if (selected) 3.dp else 0.dp,
+                color = if (selected) Hg.colors.ink else Color.Transparent,
+                shape = CircleShape
+            )
+            .clickable { viewModel.setColor(hex) }
+    )
 }
 
 // ---------------- editor ----------------
@@ -275,164 +494,3 @@ class CategoryEditorViewModel(
     }
 }
 
-@Composable
-fun CategoryEditorScreen(
-    editId: Long,
-    onBack: () -> Unit,
-    onSaved: () -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: CategoryEditorViewModel = viewModel(
-        key = "category_editor_$editId",
-        factory = hisabViewModelFactory { CategoryEditorViewModel(editId, container.categoryRepository) }
-    )
-    val state by viewModel.state.collectAsState()
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-
-    LaunchedEffect(state.saved, state.deleted) {
-        if (state.saved || state.deleted) onSaved()
-    }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (state.isEdit) "ক্যাটাগরি সম্পাদনা" else "নতুন ক্যাটাগরি",
-                onBack = onBack
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedTextField(
-                value = state.name,
-                onValueChange = viewModel::setName,
-                label = { Text("ক্যাটাগরির নাম") },
-                placeholder = { Text("যেমন: বাচ্চাদের পড়াশোনা") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            if (!state.isEdit) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CategoryKind.entries.forEach { kind ->
-                        FilterChip(
-                            selected = state.kind == kind,
-                            onClick = { viewModel.setKind(kind) },
-                            label = { Text(kind.bnLabel()) }
-                        )
-                    }
-                }
-            }
-
-            Text("আইকন বেছে নিন", style = MaterialTheme.typography.titleSmall)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(6),
-                modifier = Modifier.fillMaxWidth().height(150.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(iconOptions) { (key, icon) ->
-                    val selected = state.iconKey == key
-                    Box(
-                        Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (selected) colorFromHex(state.colorHex).copy(alpha = 0.2f)
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .border(
-                                width = if (selected) 2.dp else 0.dp,
-                                color = if (selected) colorFromHex(state.colorHex) else Color.Transparent,
-                                shape = CircleShape
-                            )
-                            .clickable { viewModel.setIcon(key) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(icon, contentDescription = key, tint = colorFromHex(state.colorHex))
-                    }
-                }
-            }
-
-            Text("রং বেছে নিন", style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                categoryColorOptions.take(6).forEach { color -> ColorDot(color, state, viewModel) }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                categoryColorOptions.drop(6).forEach { color -> ColorDot(color, state, viewModel) }
-            }
-
-            state.message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                Text("সংরক্ষণ করুন")
-            }
-
-            if (state.isEdit) {
-                Text(
-                    "এই ক্যাটাগরিতে ${BengaliNumber.formatCount(state.usageCount.toLong())}টি হিসাব-এন্ট্রি আছে।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedButton(
-                    onClick = { viewModel.setArchived(!state.archived) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (state.archived) "আর্কাইভ থেকে ফিরিয়ে আনুন" else "আর্কাইভ করুন")
-                }
-                OutlinedButton(
-                    onClick = { showDeleteConfirm = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("স্থায়ীভাবে মুছুন", color = MaterialTheme.colorScheme.error)
-                }
-                Text(
-                    "লেনদেন থাকলে মুছে ফেলা যাবে না — ইতিহাস রক্ষার জন্য আর্কাইভ করুন।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-
-    if (showDeleteConfirm) {
-        ConfirmDialog(
-            title = "ক্যাটাগরি মুছে ফেলবেন?",
-            message = "এটি আর ফেরত আনা যাবে না। (লেনদেন থাকলে মোছা হবে না।)",
-            confirmText = "মুছে ফেলুন",
-            destructive = true,
-            onConfirm = {
-                viewModel.delete()
-                showDeleteConfirm = false
-            },
-            onDismiss = { showDeleteConfirm = false }
-        )
-    }
-}
-
-@Composable
-private fun ColorDot(color: Color, state: CategoryEditorUiState, viewModel: CategoryEditorViewModel) {
-    val hex = color.toArgb().toLong() and 0xFFFFFFFFL
-    val selected = state.colorHex == hex
-    Box(
-        Modifier
-            .size(38.dp)
-            .clip(CircleShape)
-            .background(color)
-            .border(
-                width = if (selected) 3.dp else 0.dp,
-                color = if (selected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                shape = CircleShape
-            )
-            .clickable { viewModel.setColor(hex) }
-    )
-}
