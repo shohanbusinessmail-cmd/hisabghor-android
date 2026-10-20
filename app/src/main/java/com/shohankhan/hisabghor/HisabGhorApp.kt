@@ -18,15 +18,15 @@ class HisabGhorApp : Application(), Configuration.Provider {
     lateinit var container: AppContainer
         private set
 
-    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
-        appScope.launch {
+        container.appLockManager.start()
+        container.appScope.launch {
             SeedData.seedIfEmpty(container.database)
             container.planningRepository.materializeDueRecurringRules()
         }
+        ReminderScheduler.scheduleDaily(this)
     }
 
     override val workManagerConfiguration: Configuration

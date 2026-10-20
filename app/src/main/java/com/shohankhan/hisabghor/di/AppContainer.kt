@@ -1,7 +1,13 @@
 package com.shohankhan.hisabghor.di
 
 import android.content.Context
+import com.shohankhan.hisabghor.BuildConfig
+import com.shohankhan.hisabghor.core.backup.BackupRepository
 import com.shohankhan.hisabghor.core.database.HisabGhorDatabase
+import com.shohankhan.hisabghor.core.security.AppLockManager
+import com.shohankhan.hisabghor.core.security.KeystoreCrypto
+import com.shohankhan.hisabghor.core.security.SecurityRepository
+import com.shohankhan.hisabghor.core.security.hisabGhorDataStore
 import com.shohankhan.hisabghor.data.AccountRepository
 import com.shohankhan.hisabghor.data.AuditLogger
 import com.shohankhan.hisabghor.data.CategoryRepository
@@ -14,12 +20,18 @@ import com.shohankhan.hisabghor.data.SavingsRepository
 import com.shohankhan.hisabghor.data.SearchRepository
 import com.shohankhan.hisabghor.data.ShopRepository
 import com.shohankhan.hisabghor.data.TransactionRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import java.io.File
 
 /**
  * Manual dependency container (keeps the build free of DI-framework codegen).
  * One instance lives in [com.shohankhan.hisabghor.HisabGhorApp].
  */
 class AppContainer(appContext: Context) {
+
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val database: HisabGhorDatabase = HisabGhorDatabase.create(appContext)
 
@@ -38,4 +50,15 @@ class AppContainer(appContext: Context) {
         database, ledgerRepository, accountRepository, planningRepository
     )
     val searchRepository = SearchRepository(database)
+
+    val securityRepository = SecurityRepository(
+        appContext.hisabGhorDataStore,
+        KeystoreCrypto()
+    )
+    val appLockManager = AppLockManager(securityRepository, appScope)
+
+    val receiptsDir: File = File(appContext.filesDir, "receipts").apply { mkdirs() }
+    val backupRepository = BackupRepository(
+        database, receiptsDir, auditLogger, BuildConfig.VERSION_NAME
+    )
 }

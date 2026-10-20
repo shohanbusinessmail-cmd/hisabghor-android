@@ -71,14 +71,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set +e
+          touch build-test.log build-apk.log
           {
             echo "### CI failed — run ${{ github.run_id }} · commit ${{ github.sha }}"
             echo '```text'
-            grep -hE "^e: |^w: .*error|error:|FAILURE:|What went wrong|> Task .*FAILED|Execution failed" build-test.log build-apk.log 2>/dev/null | head -n 300
-            echo "----- tail -----"
-            tail -n 60 build-test.log build-apk.log 2>/dev/null
+            grep -hE "^e: |error:|FAILURE:|What went wrong|> Task .*FAILED|Execution failed" build-test.log build-apk.log 2>/dev/null | head -n 300
+            echo "----- tail (test log) -----"
+            tail -n 80 build-test.log 2>/dev/null
+            echo "----- tail (apk log) -----"
+            tail -n 40 build-apk.log 2>/dev/null
             echo '```'
           } > comment.md
           # GitHub comment body limit is 65536 chars; keep well under it.
           head -c 60000 comment.md > comment-trimmed.md
-          gh issue comment 1 --body-file comment-trimmed.md || true
+          gh issue comment 1 --body-file comment-trimmed.md
+          exit 0
