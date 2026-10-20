@@ -147,6 +147,7 @@ fun DateField(
 }
 
 /** Read-only field that opens a bottom-sheet list for picking one option. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> SelectionField(
     label: String,

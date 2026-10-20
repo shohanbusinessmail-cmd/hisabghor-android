@@ -29,7 +29,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.shohankhan.hisabghor.feature.accounts.AccountDetailScreen
+import com.shohankhan.hisabghor.feature.accounts.AccountEditorScreen
+import com.shohankhan.hisabghor.feature.accounts.AccountListScreen
 import com.shohankhan.hisabghor.feature.dashboard.DashboardScreen
+import com.shohankhan.hisabghor.feature.transactions.TransactionDetailScreen
+import com.shohankhan.hisabghor.feature.transactions.TransactionEditorScreen
+import com.shohankhan.hisabghor.feature.transactions.TransactionListScreen
+import com.shohankhan.hisabghor.feature.transactions.TransferScreen
 
 object Routes {
     const val Dashboard = "dashboard"
@@ -154,11 +161,19 @@ fun MainNavigation() {
                     onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
                 )
             }
-            // Remaining destinations are registered with a temporary placeholder
-            // and replaced feature-by-feature (see docs/FEATURE_STATUS.md).
-            placeholder(Routes.Transactions)
+            composable(Routes.Transactions) {
+                TransactionListScreen(
+                    onAddTransaction = { navController.navigate(Routes.transactionEditor("EXPENSE")) },
+                    onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
+                )
+            }
             placeholder(Routes.Reports)
-            placeholder(Routes.Accounts)
+            composable(Routes.Accounts) {
+                AccountListScreen(
+                    onAddAccount = { navController.navigate(Routes.accountEditor()) },
+                    onOpenAccount = { navController.navigate(Routes.accountDetail(it)) }
+                )
+            }
             placeholder(Routes.More)
             placeholder(Routes.Search)
             composable(
@@ -166,17 +181,49 @@ fun MainNavigation() {
                 arguments = listOf(
                     navArgument("editId") { type = NavType.LongType; defaultValue = -1L }
                 )
-            ) { PlaceholderScreen() }
-            composable(Routes.TransactionDetail) { PlaceholderScreen() }
+            ) { entry ->
+                TransactionEditorScreen(
+                    kindArg = entry.arguments?.getString("kind") ?: "EXPENSE",
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.TransactionDetail) { entry ->
+                TransactionDetailScreen(
+                    transactionId = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L,
+                    onBack = { navController.pop() },
+                    onNavigate = { route -> navController.navigate(route) }
+                )
+            }
             composable(
                 Routes.Transfer,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
+            ) { entry ->
+                TransferScreen(
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
             composable(
                 Routes.AccountEditor,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
-            composable(Routes.AccountDetail) { PlaceholderScreen() }
+            ) { entry ->
+                AccountEditorScreen(
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.AccountDetail) { entry ->
+                AccountDetailScreen(
+                    accountId = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L,
+                    onBack = { navController.pop() },
+                    onEdit = { navController.navigate(Routes.accountEditor(it)) },
+                    onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
+                )
+            }
             placeholder(Routes.Categories)
             composable(
                 Routes.CategoryEditor,

@@ -158,6 +158,28 @@ class TransactionRepository(
 
     fun observeRecent(limit: Int = 10): Flow<List<TransactionEntity>> = txnDao.observeRecent(limit)
 
+    // ---------------- attachments (receipt files) ----------------
+
+    fun observeAttachments(transactionId: Long): Flow<List<com.shohankhan.hisabghor.core.database.AttachmentEntity>> =
+        txnDao.observeAttachments(transactionId)
+
+    suspend fun addAttachment(
+        transactionId: Long,
+        fileName: String,
+        mimeType: String?,
+        sizeBytes: Long
+    ): Long = txnDao.insertAttachment(
+        com.shohankhan.hisabghor.core.database.AttachmentEntity(
+            transactionId = transactionId,
+            fileName = fileName,
+            mimeType = mimeType,
+            sizeBytes = sizeBytes,
+            createdAt = Dates.nowMs()
+        )
+    )
+
+    suspend fun deleteAttachment(id: Long) = txnDao.deleteAttachment(id)
+
     fun observeFiltered(
         kind: TransactionKind? = null,
         categoryId: Long? = null,

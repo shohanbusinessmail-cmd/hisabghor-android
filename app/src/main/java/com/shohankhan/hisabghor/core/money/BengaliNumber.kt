@@ -68,6 +68,35 @@ object BengaliNumber {
     }
 
     /**
+     * Parses a quantity like "১.৫" or "2.250" into thousandths (milli-units),
+     * e.g. ১.৫ কেজি → 1500. Up to 3 decimal places; null when invalid.
+     */
+    fun parseQuantityMilli(raw: String): Long? {
+        var s = toAsciiDigits(raw.trim().replace(",", "").replace(" ", ""))
+        if (s.isEmpty()) return null
+        if (s.startsWith(".")) s = "0$s"
+        if (s.endsWith(".")) s += "0"
+        if (!s.matches(Regex("""\d+(\.\d{1,3})?"""))) return null
+        val parts = s.split(".")
+        val whole = parts[0].toLongOrNull() ?: return null
+        val frac = if (parts.size == 2) parts[1].padEnd(3, '0').toLong() else 0L
+        return try {
+            Math.addExact(Math.multiplyExact(whole, 1000L), frac)
+        } catch (e: ArithmeticException) {
+            null
+        }
+    }
+
+    /** Formats thousandths back to a Bengali quantity string: 1500 → "১.৫". */
+    fun formatQuantityMilli(milli: Long): String {
+        val whole = milli / 1000
+        val frac = milli % 1000
+        val fracText = frac.toString().padStart(3, '0').trimEnd('0')
+        val ascii = if (fracText.isEmpty()) whole.toString() else "$whole.$fracText"
+        return toBengaliDigits(ascii)
+    }
+
+    /**
      * Parses a user-entered amount into poisha. Returns null when the text is
      * not a valid amount (empty, letters, more than 2 decimals, overflow...).
      */
