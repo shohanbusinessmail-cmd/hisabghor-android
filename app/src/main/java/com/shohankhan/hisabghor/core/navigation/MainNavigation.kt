@@ -40,6 +40,17 @@ import com.shohankhan.hisabghor.feature.debts.AgreementEditorScreen
 import com.shohankhan.hisabghor.feature.debts.DebtListScreen
 import com.shohankhan.hisabghor.feature.debts.PersonDetailScreen
 import com.shohankhan.hisabghor.feature.debts.PersonEditorScreen
+import com.shohankhan.hisabghor.feature.loans.LoanDetailScreen
+import com.shohankhan.hisabghor.feature.loans.LoanEditorScreen
+import com.shohankhan.hisabghor.feature.loans.LoanListScreen
+import com.shohankhan.hisabghor.feature.loans.LoanPaymentScreen
+import com.shohankhan.hisabghor.feature.planning.BudgetsScreen
+import com.shohankhan.hisabghor.feature.planning.NetWorthItemsScreen
+import com.shohankhan.hisabghor.feature.planning.RecurringScreen
+import com.shohankhan.hisabghor.feature.planning.RemindersScreen
+import com.shohankhan.hisabghor.feature.savings.GoalEditorScreen
+import com.shohankhan.hisabghor.feature.savings.SavingsMoveScreen
+import com.shohankhan.hisabghor.feature.savings.SavingsScreen
 import com.shohankhan.hisabghor.feature.shops.ShopDetailScreen
 import com.shohankhan.hisabghor.feature.shops.ShopEditorScreen
 import com.shohankhan.hisabghor.feature.shops.ShopListScreen
@@ -350,23 +361,62 @@ fun MainNavigation() {
                     onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
                 )
             }
-            placeholder(Routes.Loans)
+            composable(Routes.Loans) {
+                LoanListScreen(
+                    onNewLoan = { kind -> navController.navigate(Routes.loanEditor(kind)) },
+                    onOpenLoan = { navController.navigate(Routes.loanDetail(it)) }
+                )
+            }
             composable(
                 Routes.LoanEditor,
                 arguments = listOf(
                     navArgument("kind") { type = NavType.StringType; defaultValue = "NGO" }
                 )
-            ) { PlaceholderScreen() }
-            composable(Routes.LoanDetail) { PlaceholderScreen() }
+            ) { entry ->
+                LoanEditorScreen(
+                    kindArg = entry.arguments?.getString("kind") ?: "NGO",
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.LoanDetail) { entry ->
+                LoanDetailScreen(
+                    loanId = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L,
+                    onBack = { navController.pop() },
+                    onRecordPayment = { navController.navigate(Routes.loanPayment(it)) },
+                    onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
+                )
+            }
             composable(
                 Routes.LoanPayment,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
-            placeholder(Routes.Savings)
+            ) { entry ->
+                LoanPaymentScreen(
+                    loanId = entry.arguments?.getString("loanId")?.toLongOrNull() ?: -1L,
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.Savings) {
+                SavingsScreen(
+                    onAddGoal = { navController.navigate(Routes.goalEditor()) },
+                    onEditGoal = { navController.navigate(Routes.goalEditor(it)) },
+                    onMove = { goalId, accountId, withdraw ->
+                        navController.navigate(Routes.savingsMove(goalId, accountId, withdraw))
+                    }
+                )
+            }
             composable(
                 Routes.GoalEditor,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
+            ) { entry ->
+                GoalEditorScreen(
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
             composable(
                 Routes.SavingsMove,
                 arguments = listOf(
@@ -375,11 +425,29 @@ fun MainNavigation() {
                     navArgument("withdraw") { type = NavType.BoolType; defaultValue = false },
                     navArgument("editId") { type = NavType.LongType; defaultValue = -1L }
                 )
-            ) { PlaceholderScreen() }
-            placeholder(Routes.Budgets)
-            placeholder(Routes.Reminders)
-            placeholder(Routes.Recurring)
-            placeholder(Routes.NetWorthItems)
+            ) { entry ->
+                SavingsMoveScreen(
+                    goalId = entry.arguments?.getLong("goalId") ?: -1L,
+                    accountId = entry.arguments?.getLong("accountId") ?: -1L,
+                    withdraw = entry.arguments?.getBoolean("withdraw") ?: false,
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() },
+                    onCreateSavingsAccount = { navController.navigate(Routes.accountEditor()) }
+                )
+            }
+            composable(Routes.Budgets) {
+                BudgetsScreen(onBack = { navController.pop() })
+            }
+            composable(Routes.Reminders) {
+                RemindersScreen(onBack = { navController.pop() })
+            }
+            composable(Routes.Recurring) {
+                RecurringScreen(onBack = { navController.pop() })
+            }
+            composable(Routes.NetWorthItems) {
+                NetWorthItemsScreen(onBack = { navController.pop() })
+            }
             placeholder(Routes.Settings)
             placeholder(Routes.About)
         }
