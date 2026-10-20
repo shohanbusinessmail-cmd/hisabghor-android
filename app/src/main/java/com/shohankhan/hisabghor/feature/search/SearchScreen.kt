@@ -48,6 +48,17 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import androidx.compose.foundation.layout.PaddingValues
+import com.shohankhan.hisabghor.core.designsystem.EmptyState
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class SearchViewModel(private val search: SearchRepository) : ViewModel() {
@@ -80,98 +91,150 @@ fun SearchScreen(
     val query by viewModel.query.collectAsState()
     val results by viewModel.results.collectAsState()
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "খুঁজুন", onBack = onBack) }
+    HgScreen(
+        title = "খুঁজুন",
+        subtitle = "লেনদেন, দোকান, ব্যক্তি, ঋণ",
+        onBack = onBack
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = viewModel::setQuery,
-                label = { Text("লেনদেন, দোকান, ব্যক্তি, ঋণ খুঁজুন") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
-            )
+            Column(Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)) {
+                HgTextField(
+                    value = query,
+                    onValueChange = viewModel::setQuery,
+                    label = "লেনদেন, দোকান, ব্যক্তি, ঋণ খুঁজুন",
+                    leadingIcon = Icons.Filled.Search
+                )
+            }
             when {
-                query.trim().length < 2 -> Text(
-                    "কমপক্ষে ২টি অক্ষর লিখুন — নাম, শিরোনাম বা মন্তব্য দিয়ে খুঁজতে পারবেন।",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                query.trim().length < 2 -> Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = ScreenPadding)
+                ) {
+                    Spacer(Modifier.height(Space.md))
+                    Text(
+                        "কমপক্ষে ২টি অক্ষর লিখুন — নাম, শিরোনাম বা মন্তব্য দিয়ে খুঁজতে পারবেন।",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Hg.colors.inkSecondary
+                    )
+                }
+                results.isEmpty -> EmptyState(
+                    icon = Icons.Filled.Search,
+                    title = "কিছু পাওয়া যায়নি",
+                    subtitle = "\"$query\" দিয়ে কোনো লেনদেন, দোকান, ব্যক্তি বা ঋণ মেলেনি।"
                 )
-                results.isEmpty -> Text(
-                    "\"$query\" দিয়ে কিছু পাওয়া যায়নি।",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                else -> LazyColumn(Modifier.fillMaxSize()) {
+                else -> LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = Space.xxl)
+                ) {
                     if (results.transactions.isNotEmpty()) {
-                        item { SectionTitle("লেনদেন") }
+                        item { SearchSectionTitle("লেনদেন") }
                         items(results.transactions, key = { "txn_${it.id}" }) { txn ->
-                            TransactionRow(txn, onClick = { onOpenTransaction(txn.id) })
-                            HorizontalDivider(Modifier.padding(start = 70.dp))
+                            Column(Modifier.padding(horizontal = ScreenPadding)) {
+                                TransactionRow(txn, onClick = { onOpenTransaction(txn.id) })
+                                HgDivider(startInset = 52)
+                            }
                         }
                     }
                     if (results.shops.isNotEmpty()) {
-                        item { SectionTitle("দোকান") }
-                        items(results.shops, key = { "shop_${it.id}" }) { shop ->
-                            ResultRow(
-                                icon = Icons.Filled.Storefront,
-                                title = shop.name,
-                                subtitle = shop.merchantName ?: shop.address ?: "দোকানের খাতা",
-                                onClick = { onOpenShop(shop.id) }
-                            )
+                        item { SearchSectionTitle("দোকান") }
+                        item {
+                            HgCard(
+                                Modifier.padding(horizontal = ScreenPadding),
+                                padding = PaddingValues(vertical = Space.xs)
+                            ) {
+                                results.shops.forEachIndexed { index, shop ->
+                                    HgListRow(
+                                        title = shop.name,
+                                        subtitle = shop.merchantName ?: shop.address ?: "দোকানের খাতা",
+                                        leading = { IconChip(Icons.Filled.Storefront) },
+                                        onClick = { onOpenShop(shop.id) }
+                                    )
+                                    if (index != results.shops.lastIndex) HgDivider(startInset = 68)
+                                }
+                            }
                         }
                     }
                     if (results.parties.isNotEmpty()) {
-                        item { SectionTitle("ব্যক্তি") }
-                        items(results.parties, key = { "party_${it.id}" }) { party ->
-                            ResultRow(
-                                icon = Icons.Filled.Person,
-                                title = party.name,
-                                subtitle = party.phone ?: "ধার ও পাওনা",
-                                onClick = { onOpenPerson(party.id) }
-                            )
+                        item { SearchSectionTitle("ব্যক্তি") }
+                        item {
+                            HgCard(
+                                Modifier.padding(horizontal = ScreenPadding),
+                                padding = PaddingValues(vertical = Space.xs)
+                            ) {
+                                results.parties.forEachIndexed { index, party ->
+                                    HgListRow(
+                                        title = party.name,
+                                        subtitle = party.phone ?: "ধার ও পাওনা",
+                                        leading = { IconChip(Icons.Filled.Person) },
+                                        onClick = { onOpenPerson(party.id) }
+                                    )
+                                    if (index != results.parties.lastIndex) HgDivider(startInset = 68)
+                                }
+                            }
                         }
                     }
                     if (results.loans.isNotEmpty()) {
-                        item { SectionTitle("ঋণ ও ধার") }
-                        items(results.loans, key = { "loan_${it.id}" }) { loan ->
-                            ResultRow(
-                                icon = Icons.Filled.Handshake,
-                                title = loan.organizationName,
-                                subtitle = loan.kind.bnLabel(),
-                                onClick = {
-                                    if (loan.kind == LoanKind.NGO || loan.kind == LoanKind.BANK) {
-                                        onOpenLoan(loan.id)
-                                    } else {
-                                        onOpenAgreement(loan.id)
-                                    }
+                        item { SearchSectionTitle("ঋণ ও ধার") }
+                        item {
+                            HgCard(
+                                Modifier.padding(horizontal = ScreenPadding),
+                                padding = PaddingValues(vertical = Space.xs)
+                            ) {
+                                results.loans.forEachIndexed { index, loan ->
+                                    HgListRow(
+                                        title = loan.organizationName,
+                                        subtitle = loan.kind.bnLabel(),
+                                        leading = { IconChip(Icons.Filled.Handshake) },
+                                        onClick = {
+                                            if (loan.kind == LoanKind.NGO || loan.kind == LoanKind.BANK) {
+                                                onOpenLoan(loan.id)
+                                            } else {
+                                                onOpenAgreement(loan.id)
+                                            }
+                                        }
+                                    )
+                                    if (index != results.loans.lastIndex) HgDivider(startInset = 68)
                                 }
-                            )
+                            }
                         }
                     }
                     if (results.accounts.isNotEmpty()) {
-                        item { SectionTitle("অ্যাকাউন্ট") }
-                        items(results.accounts, key = { "account_${it.id}" }) { account ->
-                            ResultRow(
-                                icon = Icons.Filled.AccountBalanceWallet,
-                                title = account.name,
-                                subtitle = account.type.bnLabel(),
-                                onClick = { onOpenAccount(account.id) }
-                            )
+                        item { SearchSectionTitle("অ্যাকাউন্ট") }
+                        item {
+                            HgCard(
+                                Modifier.padding(horizontal = ScreenPadding),
+                                padding = PaddingValues(vertical = Space.xs)
+                            ) {
+                                results.accounts.forEachIndexed { index, account ->
+                                    HgListRow(
+                                        title = account.name,
+                                        subtitle = account.type.bnLabel(),
+                                        leading = { IconChip(Icons.Filled.AccountBalanceWallet) },
+                                        onClick = { onOpenAccount(account.id) }
+                                    )
+                                    if (index != results.accounts.lastIndex) HgDivider(startInset = 68)
+                                }
+                            }
                         }
                     }
                     if (results.categories.isNotEmpty()) {
-                        item { SectionTitle("ক্যাটাগরি") }
-                        items(results.categories, key = { "category_${it.id}" }) { category ->
-                            ResultRow(
-                                icon = Icons.Filled.Category,
-                                title = category.name,
-                                subtitle = category.kind.bnLabel(),
-                                onClick = { onOpenCategory(category.id) }
-                            )
+                        item { SearchSectionTitle("ক্যাটাগরি") }
+                        item {
+                            HgCard(
+                                Modifier.padding(horizontal = ScreenPadding),
+                                padding = PaddingValues(vertical = Space.xs)
+                            ) {
+                                results.categories.forEachIndexed { index, category ->
+                                    HgListRow(
+                                        title = category.name,
+                                        subtitle = category.kind.bnLabel(),
+                                        leading = { IconChip(Icons.Filled.Category) },
+                                        onClick = { onOpenCategory(category.id) }
+                                    )
+                                    if (index != results.categories.lastIndex) HgDivider(startInset = 68)
+                                }
+                            }
                         }
                     }
                 }
@@ -181,37 +244,11 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SectionTitle(title: String) {
+private fun SearchSectionTitle(title: String) {
     Text(
         title,
         style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        color = Hg.colors.ink,
+        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)
     )
-}
-
-@Composable
-private fun ResultRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Column(Modifier.padding(start = 12.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-    HorizontalDivider(Modifier.padding(start = 52.dp))
 }
