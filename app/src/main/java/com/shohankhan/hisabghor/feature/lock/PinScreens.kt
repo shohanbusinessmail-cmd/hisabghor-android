@@ -1,18 +1,21 @@
 package com.shohankhan.hisabghor.feature.lock
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,11 +27,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 import com.shohankhan.hisabghor.core.money.BengaliNumber
 import com.shohankhan.hisabghor.core.security.BiometricAuth
 import com.shohankhan.hisabghor.di.hisabViewModelFactory
@@ -48,72 +59,83 @@ fun rememberLockViewModel(): LockViewModel {
 @Composable
 fun PinSetupScreen(viewModel: LockViewModel = rememberLockViewModel()) {
     val state by viewModel.setupState.collectAsState()
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(Modifier.fillMaxSize(), color = Hg.colors.canvas) {
         Column(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+                .padding(horizontal = ScreenPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(36.dp))
-            Icon(
-                Icons.Filled.Lock,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.height(44.dp)
-            )
-            Spacer(Modifier.height(12.dp))
-            Text("হিসাবঘরে স্বাগতম!", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Space.xxl))
+            Box(
+                Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(Hg.colors.brandTint),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = Hg.colors.brand,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Spacer(Modifier.height(Space.md))
             Text(
-                "আপনার সব হিসাব এই ফোনেই নিরাপদে থাকবে — ইন্টারনেটের প্রয়োজন নেই। " +
-                    "শুরুতে একটি পিন তৈরি করুন, যা দিয়ে অ্যাপটি খুলবেন।",
+                "হিসাবঘরে স্বাগতম",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Hg.colors.ink
+            )
+            Spacer(Modifier.height(Space.xs))
+            Text(
+                "আপনার সব হিসাব এই ফোনেই নিরাপদে থাকবে — ইন্টারনেটের প্রয়োজন নেই।",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Hg.colors.inkSecondary,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Space.xl))
             Text(
                 when (state.stage) {
                     PinSetupStage.ENTER -> "নতুন পিন দিন (৪–৬ সংখ্যা)"
                     PinSetupStage.CONFIRM -> "আবার পিন দিন"
-                    PinSetupStage.DONE -> "পিন তৈরি হয়েছে!"
+                    PinSetupStage.DONE -> "পিন তৈরি হয়েছে"
                 },
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = Hg.colors.ink
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Space.md))
             PinDots(entered = state.enteredLength, maxLength = PIN_MAX_LENGTH)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Space.sm))
             state.message?.let {
-                Text(
-                    it,
-                    color = if (state.isError) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
+                HgNotice(
+                    title = it,
+                    tone = if (state.isError) HgTone.Expense else HgTone.Neutral
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(Space.sm))
             }
+            Spacer(Modifier.height(Space.sm))
             PinPad(
                 onDigit = viewModel::setupDigit,
                 onBackspace = viewModel::setupBackspace
             )
-            Button(
+            Spacer(Modifier.height(Space.md))
+            HgButton(
+                text = if (state.stage == PinSetupStage.ENTER) "পরের ধাপ" else "পিন তৈরি করুন",
                 onClick = viewModel::setupNext,
                 enabled = state.enteredLength >= PIN_MIN_LENGTH,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (state.stage == PinSetupStage.ENTER) "পরের ধাপ" else "পিন তৈরি করুন")
-            }
-            Spacer(Modifier.height(16.dp))
+            )
+            Spacer(Modifier.height(Space.lg))
             Text(
                 "পিনটি মনে রাখুন। পিন ভুলে গেলে অ্যাপের তথ্য ফিরে পাওয়ার একমাত্র উপায় " +
                     "আগে থেকে তৈরি করা এনক্রিপ্টেড ব্যাকআপ — কোনো গোপন পিন নেই।",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Hg.colors.inkTertiary,
                 textAlign = TextAlign.Center
             )
+            Spacer(Modifier.height(Space.xxl))
         }
     }
 }
@@ -128,52 +150,46 @@ fun LockScreen(viewModel: LockViewModel = rememberLockViewModel()) {
     val biometricAvailable = remember(context) { BiometricAuth.canAuthenticate(context) }
     val showBiometric = biometricEnabled && biometricAvailable && activity != null
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(Modifier.fillMaxSize(), color = Hg.colors.canvas) {
         Column(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+                .padding(horizontal = ScreenPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(Space.huge))
             Text(
                 "হিসাবঘর",
                 style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
+                color = Hg.colors.brand
             )
+            Spacer(Modifier.height(Space.xs))
             Text(
                 "আপনার সব হিসাব, এক জায়গায়।",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Hg.colors.inkSecondary
             )
-            Spacer(Modifier.height(28.dp))
-            Text("আনলক করতে পিন দিন", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Space.xxl))
+            Text(
+                "আনলক করতে পিন দিন",
+                style = MaterialTheme.typography.titleMedium,
+                color = Hg.colors.ink
+            )
+            Spacer(Modifier.height(Space.md))
             PinDots(entered = state.enteredLength, maxLength = PIN_MAX_LENGTH)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Space.sm))
 
-            if (state.lockedOutSeconds > 0) {
-                Text(
-                    "অনুগ্রহ করে ${BengaliNumber.formatCount(state.lockedOutSeconds)} সেকেন্ড অপেক্ষা করুন…",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(6.dp))
-            } else {
-                state.message?.let {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(6.dp))
-                }
+            val notice = if (state.lockedOutSeconds > 0) {
+                "অনুগ্রহ করে ${BengaliNumber.formatCount(state.lockedOutSeconds)} সেকেন্ড অপেক্ষা করুন…"
+            } else state.message
+            notice?.let {
+                HgNotice(title = it, tone = HgTone.Expense)
+                Spacer(Modifier.height(Space.sm))
             }
 
+            Spacer(Modifier.height(Space.sm))
             PinPad(
                 onDigit = viewModel::unlockDigit,
                 onBackspace = viewModel::unlockBackspace,
@@ -192,19 +208,27 @@ fun LockScreen(viewModel: LockViewModel = rememberLockViewModel()) {
                             Icon(
                                 Icons.Filled.Fingerprint,
                                 contentDescription = "ফিঙ্গারপ্রিন্ট দিয়ে আনলক করুন",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = Hg.colors.brand
                             )
                         }
                     }
                 } else null
             )
-            Button(
+            Spacer(Modifier.height(Space.md))
+            HgButton(
+                text = "আনলক করুন",
                 onClick = viewModel::submitUnlock,
                 enabled = state.enteredLength >= PIN_MIN_LENGTH && state.lockedOutSeconds <= 0,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("আনলক করুন")
-            }
+            )
+            Spacer(Modifier.height(Space.md))
+            Text(
+                "পিন কেউ দেখছে না তো? পিন আপনার ফোনেই জমা থাকে, কোথাও পাঠানো হয় না।",
+                style = MaterialTheme.typography.bodySmall,
+                color = Hg.colors.inkTertiary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(Space.xxl))
         }
     }
 }

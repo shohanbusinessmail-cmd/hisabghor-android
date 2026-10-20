@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -73,6 +74,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.layout.PaddingValues
+import com.shohankhan.hisabghor.core.designsystem.AmountText
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgChip
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 enum class ExportKind { ENCRYPTED_BACKUP, PLAIN_JSON, CSV, PDF }
 
@@ -326,7 +342,6 @@ fun SettingsScreen(
         }
     }
 
-    // Storage Access Framework: file writers (one per export kind).
     fun writeTo(uri: Uri?, export: PendingExport?) {
         if (uri == null || export == null) {
             viewModel.clearPendingExport()
@@ -387,45 +402,62 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "সেটিংস", onBack = onBack) },
-        snackbarHost = { SnackbarHost(snackbarHost) }
+    HgScreen(
+        title = "সেটিংস",
+        subtitle = "নিরাপত্তা, ব্যাকআপ ও পছন্দ",
+        onBack = onBack,
+        bottomBar = { SnackbarHost(snackbarHost, Modifier.padding(bottom = Space.sm)) }
     ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(Space.md)
         ) {
+            Spacer(Modifier.height(Space.sm))
             if (state.busy) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.padding(end = 10.dp))
-                    Text("কাজ চলছে…")
-                }
+                HgNotice(title = "কাজ চলছে…", tone = HgTone.Neutral)
             }
 
-            SettingsCard(title = "নিরাপত্তা") {
-                OutlinedButton(
-                    onClick = { showChangePin = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("পিন বদলান") }
-                Spacer(Modifier.height(8.dp))
-                val canBiometric = remember { BiometricAuth.canAuthenticate(context) }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                SectionLabel("নিরাপত্তা")
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = Space.lg, vertical = Space.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "অ্যাপের পিন",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Hg.colors.ink,
+                        modifier = Modifier.weight(1f)
+                    )
+                    HgButton(
+                        text = "পিন বদলান",
+                        onClick = { showChangePin = true },
+                        style = HgButtonStyle.Ghost
+                    )
+                }
+                HgDivider(startInset = 20)
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = Space.lg, vertical = Space.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Column(Modifier.weight(1f)) {
-                        Text("ফিঙ্গারপ্রিন্ট দিয়ে খুলুন")
+                        Text("ফিঙ্গারপ্রিন্ট দিয়ে খুলুন", style = MaterialTheme.typography.bodyLarge, color = Hg.colors.ink)
                         Text(
-                            if (canBiometric) "পিনের পাশাপাশি ফিঙ্গারপ্রিন্ট/মুখ দিয়েও লক খোলা যাবে"
+                            if (remember { BiometricAuth.canAuthenticate(context) })
+                                "পিনের পাশাপাশি ফিঙ্গারপ্রিন্ট/মুখ দিয়েও লক খোলা যাবে"
                             else "এই ফোনে বায়োমেট্রিক সেট করা নেই",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Hg.colors.inkSecondary
                         )
                     }
+                    Spacer(Modifier.width(Space.md))
                     Switch(
                         checked = biometricEnabled,
-                        enabled = canBiometric,
+                        enabled = remember { BiometricAuth.canAuthenticate(context) },
                         onCheckedChange = { enabled ->
                             if (enabled) {
                                 val activity = context as? FragmentActivity
@@ -439,127 +471,200 @@ fun SettingsScreen(
                             } else {
                                 viewModel.setBiometric(false)
                             }
-                        }
+                        },
+                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                            checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                            checkedTrackColor = Hg.colors.brand,
+                            uncheckedThumbColor = Hg.colors.surface,
+                            uncheckedTrackColor = Hg.colors.surfaceSunken,
+                            uncheckedBorderColor = Hg.colors.hairlineStrong
+                        )
                     )
                 }
-                Spacer(Modifier.height(8.dp))
-                Text("কতক্ষণ পর নিজে থেকে লক হবে", style = MaterialTheme.typography.titleSmall)
-                Row(
-                    Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(0 to "সাথে সাথে", 1 to "১ মিনিট", 5 to "৫ মিনিট", 15 to "১৫ মিনিট", 30 to "৩০ মিনিট")
-                        .forEach { (minutes, label) ->
-                            FilterChip(
-                                selected = autoLockMinutes == minutes,
-                                onClick = { viewModel.setAutoLock(minutes) },
-                                label = { Text(label) }
-                            )
-                        }
+                HgDivider(startInset = 20)
+                Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md)) {
+                    Eyebrow("কতক্ষণ পর নিজে থেকে লক হবে")
+                    Spacer(Modifier.height(Space.sm))
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Space.sm)
+                    ) {
+                        listOf(0 to "সাথে সাথে", 1 to "১ মিনিট", 5 to "৫ মিনিট", 15 to "১৫ মিনিট", 30 to "৩০ মিনিট")
+                            .forEach { (minutes, label) ->
+                                HgChip(
+                                    text = label,
+                                    selected = autoLockMinutes == minutes,
+                                    onClick = { viewModel.setAutoLock(minutes) }
+                                )
+                            }
+                    }
                 }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
+                HgButton(
+                    text = "এখনই লক করুন",
                     onClick = viewModel::lockNow,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("এখনই লক করুন") }
-                Text(
-                    "পিন ভুলে গেলে অ্যাপের ডেটা ফেরত পাওয়ার কোনো উপায় নেই — কোনো মাস্টার পিন নেই। তাই পিন মনে রাখুন এবং এনক্রিপ্ট করা ব্যাকআপের পাসওয়ার্ড আলাদাভাবে সাবধানে রাখুন।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = HgButtonStyle.Secondary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Space.lg)
                 )
+                Spacer(Modifier.height(Space.md))
+                HgNotice(
+                    title = "পিন ভুলে গেলে ডেটা ফেরত পাওয়ার উপায় নেই",
+                    message = "কোনো মাস্টার পিন নেই। পিন মনে রাখুন এবং এনক্রিপ্ট করা ব্যাকআপের পাসওয়ার্ড আলাদাভাবে সাবধানে রাখুন।",
+                    tone = HgTone.Warning,
+                    modifier = Modifier.padding(horizontal = Space.lg)
+                )
+                Spacer(Modifier.height(Space.md))
             }
 
-            SettingsCard(title = "পছন্দ") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                SectionLabel("পছন্দ")
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = Space.lg, vertical = Space.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Column(Modifier.weight(1f)) {
-                        Text("ড্যাশবোর্ডে টাকার অঙ্ক আড়াল করুন")
+                        Text(
+                            "ড্যাশবোর্ডে টাকার অঙ্ক আড়াল করুন",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Hg.colors.ink
+                        )
                         Text(
                             "পাশে কেউ থাকলে গোপনীয়তার জন্য",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Hg.colors.inkSecondary
                         )
                     }
+                    Spacer(Modifier.width(Space.md))
                     Switch(
                         checked = settings.hideAmountsOnDashboard,
-                        onCheckedChange = viewModel::setHideAmounts
+                        onCheckedChange = viewModel::setHideAmounts,
+                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                            checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                            checkedTrackColor = Hg.colors.brand,
+                            uncheckedThumbColor = Hg.colors.surface,
+                            uncheckedTrackColor = Hg.colors.surfaceSunken,
+                            uncheckedBorderColor = Hg.colors.hairlineStrong
+                        )
                     )
                 }
-                Spacer(Modifier.height(8.dp))
-                Text("রিমাইন্ডার কত দিন আগে জানাবে", style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(0, 1, 2, 3, 7).forEach { days ->
-                        FilterChip(
-                            selected = settings.reminderLeadDays == days,
-                            onClick = { viewModel.setLeadDays(days) },
-                            label = {
-                                Text(
-                                    if (days == 0) "ঐদিনই"
-                                    else "${BengaliNumber.formatCount(days.toLong())} দিন আগে"
-                                )
-                            }
-                        )
+                HgDivider(startInset = 20)
+                Column(Modifier.padding(horizontal = Space.lg, vertical = Space.md)) {
+                    Eyebrow("রিমাইন্ডার কত দিন আগে জানাবে")
+                    Spacer(Modifier.height(Space.sm))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        listOf(0, 1, 2, 3, 7).forEach { days ->
+                            HgChip(
+                                text = if (days == 0) "ঐদিনই"
+                                else "${BengaliNumber.formatCount(days.toLong())} দিন",
+                                selected = settings.reminderLeadDays == days,
+                                onClick = { viewModel.setLeadDays(days) }
+                            )
+                        }
                     }
                 }
             }
 
-            SettingsCard(title = "ব্যাকআপ ও এক্সপোর্ট") {
-                KvRow(
-                    "সর্বশেষ ব্যাকআপ",
-                    settings.lastBackupAtMs?.let { Dates.formatShortDate(it) } ?: "এখনো নেওয়া হয়নি"
-                )
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { showBackupPassword = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("এনক্রিপ্ট করা ব্যাকআপ তৈরি করুন") }
-                OutlinedButton(
-                    onClick = { restoreLauncher.launch(arrayOf("*/*")) },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("ব্যাকআপ থেকে ফেরত আনুন") }
-                HorizontalDivider(Modifier.padding(vertical = 6.dp))
-                OutlinedButton(
-                    onClick = viewModel::createJsonExport,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("সব ডেটা JSON হিসাবে এক্সপোর্ট") }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(
-                        onClick = { viewModel.createCsvExport(allTime = false) },
+            HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                SectionLabel("ব্যাকআপ ও এক্সপোর্ট")
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = Space.lg, vertical = Space.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "সর্বশেষ ব্যাকআপ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Hg.colors.inkSecondary,
                         modifier = Modifier.weight(1f)
-                    ) { Text("CSV (এই মাস)") }
-                    OutlinedButton(
-                        onClick = { viewModel.createCsvExport(allTime = true) },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("CSV (সব সময়)") }
+                    )
+                    Text(
+                        settings.lastBackupAtMs?.let { Dates.formatShortDate(it) } ?: "এখনো নেওয়া হয়নি",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Hg.colors.ink
+                    )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(
-                        onClick = { viewModel.createPdfExport(allTime = false) },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("PDF বিবরণী (এই মাস)") }
-                    OutlinedButton(
-                        onClick = { viewModel.createPdfExport(allTime = true) },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("PDF বিবরণী (সব সময়)") }
+                Column(Modifier.padding(horizontal = Space.lg)) {
+                    HgButton(
+                        text = "এনক্রিপ্ট করা ব্যাকআপ তৈরি করুন",
+                        onClick = { showBackupPassword = true },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(Space.sm))
+                    HgButton(
+                        text = "ব্যাকআপ থেকে ফেরত আনুন",
+                        onClick = { restoreLauncher.launch(arrayOf("*/*")) },
+                        style = HgButtonStyle.Secondary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
-                Text(
-                    "সতর্কতা: JSON ও CSV ফাইলে কোনো এনক্রিপশন থাকে না — যার হাতে পড়বে সে পড়তে পারবে। নিয়মিত সুরক্ষার জন্য এনক্রিপ্ট করা ব্যাকআপ ব্যবহার করুন।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Danger600
-                )
-                Text(
-                    "সব তথ্য আপনার ফোনেই থাকে — ইন্টারনেট ছাড়াই ব্যাকআপ তৈরি ও রিস্টোর করা যায়।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                HgDivider(startInset = 20, modifier = Modifier.padding(vertical = Space.sm))
+                Column(Modifier.padding(horizontal = Space.lg)) {
+                    Eyebrow("ডেটা এক্সপোর্ট")
+                    Spacer(Modifier.height(Space.sm))
+                    HgButton(
+                        text = "সব ডেটা JSON হিসাবে",
+                        onClick = viewModel::createJsonExport,
+                        style = HgButtonStyle.Secondary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(Space.sm))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        HgButton(
+                            text = "CSV (এই মাস)",
+                            onClick = { viewModel.createCsvExport(allTime = false) },
+                            style = HgButtonStyle.Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        HgButton(
+                            text = "CSV (সব সময়)",
+                            onClick = { viewModel.createCsvExport(allTime = true) },
+                            style = HgButtonStyle.Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Spacer(Modifier.height(Space.sm))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+                        HgButton(
+                            text = "PDF (এই মাস)",
+                            onClick = { viewModel.createPdfExport(allTime = false) },
+                            style = HgButtonStyle.Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        HgButton(
+                            text = "PDF (সব সময়)",
+                            onClick = { viewModel.createPdfExport(allTime = true) },
+                            style = HgButtonStyle.Secondary,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Spacer(Modifier.height(Space.md))
+                    HgNotice(
+                        title = "JSON ও CSV এনক্রিপ্টেড নয়",
+                        message = "যার হাতে পড়বে সে পড়তে পারবে। নিয়মিত সুরক্ষার জন্য এনক্রিপ্ট করা ব্যাকআপ ব্যবহার করুন।",
+                        tone = HgTone.Warning
+                    )
+                    Spacer(Modifier.height(Space.sm))
+                    Text(
+                        "সব তথ্য আপনার ফোনেই থাকে — ইন্টারনেট ছাড়াই ব্যাকআপ তৈরি ও রিস্টোর করা যায়।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                }
+                Spacer(Modifier.height(Space.md))
             }
 
-            SettingsCard(title = "অ্যাপ সম্পর্কে") {
-                OutlinedButton(
-                    onClick = onOpenAbout,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("হিসাবঘর সম্পর্কে জানুন") }
+            HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                SectionLabel("অ্যাপ সম্পর্কে")
+                Column(Modifier.padding(horizontal = Space.lg, vertical = Space.sm)) {
+                    HgButton(
+                        text = "হিসাবঘর সম্পর্কে জানুন",
+                        onClick = onOpenAbout,
+                        style = HgButtonStyle.Secondary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Space.xxl))
         }
     }
 
@@ -608,54 +713,78 @@ fun SettingsScreen(
     state.restorePreview?.let { preview ->
         AlertDialog(
             onDismissRequest = viewModel::cancelRestore,
+            containerColor = Hg.colors.surface,
+            shape = Radius.panel,
             title = { Text("ব্যাকআপ ফেরত আনবেন?") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    KvRow("ব্যাকআপের তারিখ", Dates.formatShortDate(preview.createdAtEpochMs))
-                    KvRow("অ্যাপ সংস্করণ", BengaliNumber.toBengaliDigits(preview.appVersion))
-                    KvRow(
+                Column(verticalArrangement = Arrangement.spacedBy(Space.xs)) {
+                    RestoreLine("ব্যাকআপের তারিখ", Dates.formatShortDate(preview.createdAtEpochMs))
+                    RestoreLine("অ্যাপ সংস্করণ", BengaliNumber.toBengaliDigits(preview.appVersion))
+                    RestoreLine(
                         "অ্যাকাউন্ট",
                         BengaliNumber.formatCount(preview.accountCount.toLong()) + "টি"
                     )
-                    KvRow(
+                    RestoreLine(
                         "লেনদেন",
                         BengaliNumber.formatCount(preview.transactionCount.toLong()) + "টি"
                     )
-                    KvRow("দোকান", BengaliNumber.formatCount(preview.shopCount.toLong()) + "টি")
-                    KvRow("ঋণ/ধার", BengaliNumber.formatCount(preview.loanCount.toLong()) + "টি")
-                    KvRow(
+                    RestoreLine("দোকান", BengaliNumber.formatCount(preview.shopCount.toLong()) + "টি")
+                    RestoreLine("ঋণ/ধার", BengaliNumber.formatCount(preview.loanCount.toLong()) + "টি")
+                    RestoreLine(
                         "রসিদের ছবি",
                         BengaliNumber.formatCount(preview.attachmentFilesIncluded.toLong()) + "টি আছে" +
                             if (preview.attachmentFilesMissing > 0)
                                 ", ${BengaliNumber.formatCount(preview.attachmentFilesMissing.toLong())}টি পাওয়া যায়নি"
                             else ""
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "সতর্কতা: এখনকার সব তথ্য মুছে ব্যাকআপের তথ্য বসানো হবে। দরকার হলে আগে বর্তমান ডেটার আলাদা ব্যাকআপ নিয়ে রাখুন।",
-                        color = Danger600,
-                        style = MaterialTheme.typography.bodyMedium
+                    Spacer(Modifier.height(Space.sm))
+                    HgNotice(
+                        title = "এখনকার সব তথ্য প্রতিস্থাপিত হবে",
+                        message = "দরকার হলে আগে বর্তমান ডেটার আলাদা ব্যাকআপ নিয়ে রাখুন।",
+                        tone = HgTone.Expense
                     )
                 }
             },
             confirmButton = {
-                TextButton(onClick = viewModel::confirmRestore) { Text("হ্যাঁ, ফেরত আনুন") }
+                TextButton(onClick = viewModel::confirmRestore) {
+                    Text("হ্যাঁ, ফেরত আনুন", color = Hg.colors.expense)
+                }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::cancelRestore) { Text("বাতিল") }
+                TextButton(onClick = viewModel::cancelRestore) {
+                    Text("বাতিল", color = Hg.colors.inkSecondary)
+                }
             }
         )
     }
 }
 
 @Composable
-private fun SettingsCard(title: String, content: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(10.dp))
-            content()
-        }
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleMedium,
+        color = Hg.colors.ink,
+        modifier = Modifier.padding(horizontal = Space.lg, vertical = Space.md)
+    )
+}
+
+@Composable
+private fun RestoreLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = Space.xxs)) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = Hg.colors.inkSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            color = Hg.colors.ink,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.weight(1.4f)
+        )
     }
 }
 
@@ -670,13 +799,15 @@ private fun ChangePinDialog(
     var error by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Hg.colors.surface,
+        shape = Radius.panel,
         title = { Text("পিন বদলান") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
                 PinField(oldPin, { oldPin = it }, "বর্তমান পিন")
                 PinField(newPin, { newPin = it }, "নতুন পিন (কমপক্ষে ৪ সংখ্যা)")
                 PinField(confirmPin, { confirmPin = it }, "নতুন পিন আবার দিন")
-                error?.let { Text(it, color = Danger600) }
+                error?.let { HgNotice(title = it, tone = HgTone.Expense) }
             }
         },
         confirmButton = {
@@ -688,10 +819,10 @@ private fun ChangePinDialog(
                     newPin != confirmPin -> error = "নতুন পিন দুইবার একরকম হয়নি"
                     else -> onSubmit(oldPin, newPin) { error = it }
                 }
-            }) { Text("বদলান") }
+            }) { Text("বদলান", color = Hg.colors.brand) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("বাতিল") }
+            TextButton(onClick = onDismiss) { Text("বাতিল", color = Hg.colors.inkSecondary) }
         }
     )
 }
@@ -702,14 +833,12 @@ private fun PinField(
     onValueChange: (String) -> Unit,
     label: String
 ) {
-    OutlinedTextField(
+    HgTextField(
         value = value,
         onValueChange = { v -> onValueChange(v.filter { it.isDigit() }.take(12)) },
-        label = { Text(label) },
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        modifier = Modifier.fillMaxWidth()
+        label = label,
+        keyboardType = KeyboardType.NumberPassword,
+        visualTransformation = PasswordVisualTransformation()
     )
 }
 
@@ -726,29 +855,27 @@ private fun PasswordDialog(
     var error by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Hg.colors.surface,
+        shape = Radius.panel,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(message, style = MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(
+            Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
+                Text(message, style = MaterialTheme.typography.bodyMedium, color = Hg.colors.inkSecondary)
+                HgTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("পাসওয়ার্ড") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
+                    label = "পাসওয়ার্ড",
+                    visualTransformation = PasswordVisualTransformation()
                 )
                 if (confirmRequired) {
-                    OutlinedTextField(
+                    HgTextField(
                         value = confirm,
                         onValueChange = { confirm = it },
-                        label = { Text("পাসওয়ার্ড আবার দিন") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
+                        label = "পাসওয়ার্ড আবার দিন",
+                        visualTransformation = PasswordVisualTransformation()
                     )
                 }
-                error?.let { Text(it, color = Danger600) }
+                error?.let { HgNotice(title = it, tone = HgTone.Expense) }
             }
         },
         confirmButton = {
@@ -761,10 +888,10 @@ private fun PasswordDialog(
                         error = "পাসওয়ার্ড দুইবার একরকম হয়নি"
                     else -> onConfirm(password)
                 }
-            }) { Text("ঠিক আছে") }
+            }) { Text("ঠিক আছে", color = Hg.colors.brand) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("বাতিল") }
+            TextButton(onClick = onDismiss) { Text("বাতিল", color = Hg.colors.inkSecondary) }
         }
     )
 }

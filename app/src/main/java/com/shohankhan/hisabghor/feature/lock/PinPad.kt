@@ -1,5 +1,6 @@
 package com.shohankhan.hisabghor.feature.lock
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,17 +15,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.Space
+import com.shohankhan.hisabghor.core.designsystem.Stroke
 import com.shohankhan.hisabghor.core.money.BengaliNumber
 
 /** Dots indicating PIN progress (PIN digits are never shown). */
@@ -41,8 +46,7 @@ fun PinDots(entered: Int, maxLength: Int, modifier: Modifier = Modifier) {
                     .size(14.dp)
                     .clip(CircleShape)
                     .background(
-                        if (index < entered) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant
+                        if (index < entered) Hg.colors.brand else Hg.colors.surfaceSunken
                     )
             )
         }
@@ -76,7 +80,7 @@ fun PinPad(
             }
         }
         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(76.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {
                 leftAction?.invoke()
             }
             PinKey(
@@ -84,36 +88,45 @@ fun PinPad(
                 description = "সংখ্যা ০",
                 enabled = enabled
             ) { onDigit('0') }
-            Box(Modifier.size(76.dp), contentAlignment = Alignment.Center) {
-                TextButton(
+            Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {
+                IconButton(
                     onClick = onBackspace,
                     enabled = enabled,
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(56.dp)
                         .semantics { contentDescription = "শেষ সংখ্যা মুছুন" }
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Backspace, contentDescription = null)
+                    Icon(
+                        Icons.AutoMirrored.Filled.Backspace,
+                        contentDescription = null,
+                        tint = Hg.colors.inkSecondary
+                    )
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Space.sm))
     }
 }
 
 @Composable
 private fun PinKey(text: String, description: String, enabled: Boolean, onClick: () -> Unit) {
-    TextButton(
+    Surface(
         onClick = onClick,
         enabled = enabled,
+        shape = Radius.card,
+        color = Hg.colors.surface,
+        border = BorderStroke(Stroke.hairline, Hg.colors.hairline),
         modifier = Modifier
-            .size(76.dp)
-            .padding(4.dp)
+            .size(84.dp)
+            .padding(Space.xs)
             .semantics { contentDescription = description }
     ) {
-        Text(
-            text,
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text,
+                style = MaterialTheme.typography.headlineSmall,
+                color = if (enabled) Hg.colors.ink else Hg.colors.inkTertiary
+            )
+        }
     }
 }

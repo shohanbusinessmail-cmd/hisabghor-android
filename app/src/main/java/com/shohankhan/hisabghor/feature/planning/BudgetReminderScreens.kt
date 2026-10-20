@@ -181,7 +181,7 @@ fun BudgetsScreen(onBack: () -> Unit) {
                     HgBadge("${BengaliNumber.formatCount(budgets.size.toLong())}টি বাজেট")
                     if (overLimitCount > 0) {
                         Spacer(Modifier.width(Space.sm))
-                        HgBadge("$overLimitCountটি সীমা ছাড়িয়েছে", tone = HgTone.Expense)
+                        HgBadge("${overLimitCount}টি সীমা ছাড়িয়েছে", tone = HgTone.Expense)
                     }
                 }
             }

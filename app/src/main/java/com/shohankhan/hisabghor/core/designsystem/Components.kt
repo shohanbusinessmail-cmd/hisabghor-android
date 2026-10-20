@@ -73,6 +73,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -323,11 +324,11 @@ fun HgGroup(
 
 /** Hairline separator that starts after a leading icon, as in settings lists. */
 @Composable
-fun HgDivider(startInset: Int = 0) {
+fun HgDivider(startInset: Int = 0, modifier: Modifier = Modifier) {
     HorizontalDivider(
-        modifier = Modifier.padding(start = startInset.dp),
+        modifier = modifier.padding(start = startInset.dp),
         color = Hg.colors.hairline,
-        thickness = 1.dp
+        thickness = Stroke.hairline
     )
 }
 
@@ -585,11 +586,13 @@ fun HgTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     leadingIcon: ImageVector? = null,
     trailing: (@Composable () -> Unit)? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
     shape: Shape = Radius.field
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
+        visualTransformation = visualTransformation,
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it) } },
         enabled = enabled,
