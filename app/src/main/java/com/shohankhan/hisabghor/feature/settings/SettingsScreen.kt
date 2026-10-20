@@ -82,6 +82,7 @@ import com.shohankhan.hisabghor.core.designsystem.HgButton
 import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
 import com.shohankhan.hisabghor.core.designsystem.HgCard
 import com.shohankhan.hisabghor.core.designsystem.HgChip
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
 import com.shohankhan.hisabghor.core.designsystem.HgNotice
 import com.shohankhan.hisabghor.core.designsystem.HgScreen
 import com.shohankhan.hisabghor.core.designsystem.HgTextField
