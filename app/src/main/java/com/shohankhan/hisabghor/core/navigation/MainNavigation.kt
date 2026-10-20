@@ -32,7 +32,19 @@ import androidx.navigation.navArgument
 import com.shohankhan.hisabghor.feature.accounts.AccountDetailScreen
 import com.shohankhan.hisabghor.feature.accounts.AccountEditorScreen
 import com.shohankhan.hisabghor.feature.accounts.AccountListScreen
+import com.shohankhan.hisabghor.feature.categories.CategoryEditorScreen
+import com.shohankhan.hisabghor.feature.categories.CategoryListScreen
 import com.shohankhan.hisabghor.feature.dashboard.DashboardScreen
+import com.shohankhan.hisabghor.feature.debts.AgreementDetailScreen
+import com.shohankhan.hisabghor.feature.debts.AgreementEditorScreen
+import com.shohankhan.hisabghor.feature.debts.DebtListScreen
+import com.shohankhan.hisabghor.feature.debts.PersonDetailScreen
+import com.shohankhan.hisabghor.feature.debts.PersonEditorScreen
+import com.shohankhan.hisabghor.feature.shops.ShopDetailScreen
+import com.shohankhan.hisabghor.feature.shops.ShopEditorScreen
+import com.shohankhan.hisabghor.feature.shops.ShopListScreen
+import com.shohankhan.hisabghor.feature.shops.ShopPaymentScreen
+import com.shohankhan.hisabghor.feature.shops.ShopPurchaseScreen
 import com.shohankhan.hisabghor.feature.transactions.TransactionDetailScreen
 import com.shohankhan.hisabghor.feature.transactions.TransactionEditorScreen
 import com.shohankhan.hisabghor.feature.transactions.TransactionListScreen
@@ -224,39 +236,120 @@ fun MainNavigation() {
                     onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
                 )
             }
-            placeholder(Routes.Categories)
+            composable(Routes.Categories) {
+                CategoryListScreen(
+                    onBack = { navController.pop() },
+                    onAddCategory = { navController.navigate(Routes.categoryEditor()) },
+                    onEditCategory = { navController.navigate(Routes.categoryEditor(it)) }
+                )
+            }
             composable(
                 Routes.CategoryEditor,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
-            placeholder(Routes.Shops)
+            ) { entry ->
+                CategoryEditorScreen(
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.Shops) {
+                ShopListScreen(
+                    onAddShop = { navController.navigate(Routes.shopEditor()) },
+                    onOpenShop = { navController.navigate(Routes.shopDetail(it)) }
+                )
+            }
             composable(
                 Routes.ShopEditor,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
-            composable(Routes.ShopDetail) { PlaceholderScreen() }
+            ) { entry ->
+                ShopEditorScreen(
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.ShopDetail) { entry ->
+                ShopDetailScreen(
+                    shopId = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L,
+                    onBack = { navController.pop() },
+                    onEdit = { navController.navigate(Routes.shopEditor(it)) },
+                    onNewPurchase = { navController.navigate(Routes.shopPurchase(it)) },
+                    onNewPayment = { navController.navigate(Routes.shopPayment(it)) },
+                    onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
+                )
+            }
             composable(
                 Routes.ShopPurchase,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
+            ) { entry ->
+                ShopPurchaseScreen(
+                    shopId = entry.arguments?.getString("shopId")?.toLongOrNull() ?: -1L,
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
             composable(
                 Routes.ShopPayment,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
-            placeholder(Routes.Debts)
+            ) { entry ->
+                ShopPaymentScreen(
+                    shopId = entry.arguments?.getString("shopId")?.toLongOrNull() ?: -1L,
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.Debts) {
+                DebtListScreen(
+                    onAddPerson = { navController.navigate(Routes.personEditor()) },
+                    onOpenPerson = { navController.navigate(Routes.personDetail(it)) }
+                )
+            }
             composable(
                 Routes.PersonEditor,
                 arguments = listOf(navArgument("editId") { type = NavType.LongType; defaultValue = -1L })
-            ) { PlaceholderScreen() }
-            composable(Routes.PersonDetail) { PlaceholderScreen() }
+            ) { entry ->
+                PersonEditorScreen(
+                    editId = entry.arguments?.getLong("editId") ?: -1L,
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.PersonDetail) { entry ->
+                PersonDetailScreen(
+                    personId = entry.arguments?.getString("id")?.toLongOrNull() ?: -1L,
+                    onBack = { navController.pop() },
+                    onEditPerson = { navController.navigate(Routes.personEditor(it)) },
+                    onNewAgreement = { pid, kind ->
+                        navController.navigate(Routes.agreementEditor(pid, kind))
+                    },
+                    onOpenAgreement = { navController.navigate(Routes.agreementDetail(it)) }
+                )
+            }
             composable(
                 Routes.AgreementEditor,
                 arguments = listOf(
                     navArgument("personId") { type = NavType.LongType; defaultValue = -1L },
                     navArgument("kind") { type = NavType.StringType; defaultValue = "PERSONAL_BORROW" }
                 )
-            ) { PlaceholderScreen() }
-            composable(Routes.AgreementDetail) { PlaceholderScreen() }
+            ) { entry ->
+                AgreementEditorScreen(
+                    personId = entry.arguments?.getLong("personId") ?: -1L,
+                    kindArg = entry.arguments?.getString("kind") ?: "PERSONAL_BORROW",
+                    onBack = { navController.pop() },
+                    onSaved = { navController.pop() }
+                )
+            }
+            composable(Routes.AgreementDetail) { entry ->
+                AgreementDetailScreen(
+                    loanId = entry.arguments?.getString("loanId")?.toLongOrNull() ?: -1L,
+                    onBack = { navController.pop() },
+                    onRecordPayment = { navController.navigate(Routes.loanPayment(it)) },
+                    onOpenTransaction = { navController.navigate(Routes.transactionDetail(it)) }
+                )
+            }
             placeholder(Routes.Loans)
             composable(
                 Routes.LoanEditor,

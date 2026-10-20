@@ -96,6 +96,22 @@ object BengaliNumber {
         return toBengaliDigits(ascii)
     }
 
+    /** Parses an interest rate like "১২.৫" (%) into basis points (1250). */
+    fun parsePercentToBp(raw: String): Int? {
+        val milli = parseQuantityMilli(raw) ?: return null
+        // milli = percent × 1000; bp = percent × 100  →  bp = milli / 10
+        if (milli < 0 || milli > 10_000_000L) return null
+        return (milli / 10).toInt()
+    }
+
+    /** Formats basis points as a Bengali percent string: 1250 → "১২.৫%" */
+    fun formatPercentBp(bp: Int): String {
+        val whole = bp / 100
+        val frac = bp % 100
+        val ascii = if (frac == 0) "$whole%" else "$whole.${frac.toString().padStart(2, '0').trimEnd('0')}%"
+        return toBengaliDigits(ascii)
+    }
+
     /**
      * Parses a user-entered amount into poisha. Returns null when the text is
      * not a valid amount (empty, letters, more than 2 decimals, overflow...).
