@@ -140,6 +140,13 @@ object Radius {
     val sheet = 28.dp
     val pill = 100.dp
 
+    val xsShape = RoundedCornerShape(xs)
+    val smShape = RoundedCornerShape(sm)
+    val mdShape = RoundedCornerShape(md)
+    val lgShape = RoundedCornerShape(lg)
+    val xlShape = RoundedCornerShape(xl)
+    val xxlShape = RoundedCornerShape(xxl)
+
     val control = RoundedCornerShape(lg)
     val field = RoundedCornerShape(lg)
     val card = RoundedCornerShape(xl)

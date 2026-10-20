@@ -794,7 +794,7 @@ private fun InlineHint(text: String) {
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(Radius.sm)
+            .clip(Radius.smShape)
             .background(Hg.colors.surfaceMuted)
             .padding(Space.md)
     ) {

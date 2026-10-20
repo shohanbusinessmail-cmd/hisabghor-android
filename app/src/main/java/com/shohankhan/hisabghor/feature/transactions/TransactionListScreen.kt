@@ -73,6 +73,76 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
+enum class PeriodPreset(val label: String) {
+    ALL("সব সময়"), TODAY("আজ"), LAST_7_DAYS("গত ৭ দিন"),
+    THIS_MONTH("এই মাস"), THIS_YEAR("এই বছর")
+}
+
+data class TransactionFilter(
+    val query: String = "",
+    val period: PeriodPreset = PeriodPreset.ALL,
+    val kind: TransactionKind? = null,
+    val accountId: Long? = null,
+    val categoryId: Long? = null
+)
+
+data class TransactionListUiState(
+    val transactions: List<TransactionEntity> = emptyList(),
+    val accounts: List<AccountEntity> = emptyList(),
+    val categories: List<CategoryEntity> = emptyList(),
+    val filter: TransactionFilter = TransactionFilter()
+)
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class TransactionListViewModel(
+    private val transactions: TransactionRepository,
+    accounts: AccountRepository,
+    categories: CategoryRepository
+) : ViewModel() {
+
+    private val filterFlow = MutableStateFlow(TransactionFilter())
+
+    private fun rangeFor(period: PeriodPreset): Pair<Long?, Long?> {
+        val now = Dates.nowMs()
+        return when (period) {
+            PeriodPreset.ALL -> null to null
+            PeriodPreset.TODAY -> Dates.dayRange(now).let { it.first to it.second }
+            PeriodPreset.LAST_7_DAYS ->
+                Dates.startOfDayMs(Dates.today().minusDays(6)) to Dates.dayRange(now).second
+            PeriodPreset.THIS_MONTH -> Dates.monthRange(now).let { it.first to it.second }
+            PeriodPreset.THIS_YEAR -> Dates.yearRange(now).let { it.first to it.second }
+        }
+    }
+
+    val uiState: StateFlow<TransactionListUiState> = combine(
+        filterFlow.flatMapLatest { filter ->
+            val (from, to) = rangeFor(filter.period)
+            transactions.observeFiltered(
+                kind = filter.kind,
+                categoryId = filter.categoryId,
+                accountId = filter.accountId,
+                fromMs = from,
+                toMs = to,
+                q = filter.query.trim()
+            )
+        },
+        accounts.observeAccountsWithBalances(),
+        categories.observeAll(),
+        filterFlow
+    ) { txns, accountList, categoryList, filter ->
+        TransactionListUiState(
+            transactions = txns,
+            accounts = accountList.map { it.account },
+            categories = categoryList,
+            filter = filter
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransactionListUiState())
+
+    fun updateFilter(change: (TransactionFilter) -> TransactionFilter) {
+        filterFlow.update(change)
+    }
+}
+
 @Composable
 fun TransactionListScreen(
     onAddTransaction: () -> Unit,

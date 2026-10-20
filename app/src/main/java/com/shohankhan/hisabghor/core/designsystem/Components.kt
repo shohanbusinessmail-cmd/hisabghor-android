@@ -356,7 +356,7 @@ fun SectionHeader(
                 style = MaterialTheme.typography.labelLarge,
                 color = Hg.colors.brand,
                 modifier = Modifier
-                    .clip(Radius.sm)
+                    .clip(Radius.smShape)
                     .clickable(onClick = onAction)
                     .padding(horizontal = Space.sm, vertical = Space.xs)
             )
@@ -985,7 +985,7 @@ fun HgBadge(
         color = fg,
         maxLines = 1,
         modifier = modifier
-            .clip(Radius.xs)
+            .clip(Radius.xsShape)
             .background(bg)
             .padding(horizontal = Space.sm, vertical = 3.dp)
     )
@@ -1011,7 +1011,7 @@ fun HgNotice(
     Row(
         modifier
             .fillMaxWidth()
-            .clip(Radius.md)
+            .clip(Radius.mdShape)
             .background(bg)
             .padding(Space.md)
     ) {
@@ -1141,7 +1141,7 @@ fun QuickAction(
     val bg = if (emphasized) Hg.colors.brand else Hg.colors.brandTint
     Column(
         modifier
-            .clip(Radius.lg)
+            .clip(Radius.lgShape)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = Space.sm),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1149,7 +1149,7 @@ fun QuickAction(
         Box(
             Modifier
                 .size(44.dp)
-                .clip(Radius.md)
+                .clip(Radius.mdShape)
                 .background(bg),
             contentAlignment = Alignment.Center
         ) {
@@ -1262,5 +1262,96 @@ fun SummaryRow(
             textAlign = TextAlign.End,
             maxLines = 1
         )
+    }
+}
+
+/**
+ * Segmented control used for income/expense/refund switches and similar
+ * mutually exclusive choices. The selected segment reads as a raised white
+ * chip inside a muted track — deliberately not a row of default FilterChips.
+ */
+@Composable
+fun <T> HgSegmented(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(Radius.field)
+            .background(Hg.colors.surfaceMuted)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        options.forEach { option ->
+            val isSelected = option == selected
+            Box(
+                Modifier
+                    .weight(1f)
+                    .clip(Radius.mdShape)
+                    .background(if (isSelected) Hg.colors.surface else Color.Transparent)
+                    .then(
+                        if (isSelected) Modifier.border(Stroke.hairline, Hg.colors.hairlineStrong, Radius.mdShape)
+                        else Modifier
+                    )
+                    .clickable(enabled = enabled, role = Role.Tab) { onSelect(option) }
+                    .heightIn(min = 40.dp)
+                    .padding(horizontal = Space.sm, vertical = Space.sm),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    label(option),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = when {
+                        !enabled -> Hg.colors.inkTertiary
+                        isSelected -> Hg.colors.brandDeep
+                        else -> Hg.colors.inkSecondary
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/** Section title inside forms, with optional supporting text. */
+@Composable
+fun FormSectionLabel(text: String, modifier: Modifier = Modifier, helper: String? = null) {
+    Column(modifier.padding(top = Space.sm, bottom = Space.xs)) {
+        Text(
+            text,
+            style = MaterialTheme.typography.labelLarge,
+            color = Hg.colors.inkSecondary
+        )
+        if (helper != null) {
+            Text(
+                helper,
+                style = MaterialTheme.typography.bodySmall,
+                color = Hg.colors.inkTertiary
+            )
+        }
+    }
+}
+
+/** Sticky bottom action bar for forms: hairline top, canvas background. */
+@Composable
+fun HgFormBottomBar(content: @Composable RowScope.() -> Unit) {
+    Surface(color = Hg.colors.surface) {
+        Column(Modifier.fillMaxWidth()) {
+            HorizontalDivider(color = Hg.colors.hairline)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = ScreenPadding, vertical = Space.md),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content
+            )
+        }
     }
 }
