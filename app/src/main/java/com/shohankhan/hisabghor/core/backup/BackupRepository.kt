@@ -4,6 +4,8 @@ import androidx.room.withTransaction
 import com.shohankhan.hisabghor.core.common.Dates
 import com.shohankhan.hisabghor.core.database.AttachmentEntity
 import com.shohankhan.hisabghor.core.database.HisabGhorDatabase
+import com.shohankhan.hisabghor.core.model.LedgerType
+import com.shohankhan.hisabghor.core.money.BengaliNumber
 import com.shohankhan.hisabghor.core.security.BackupCrypto
 import com.shohankhan.hisabghor.core.security.EncryptedBlob
 import com.shohankhan.hisabghor.data.AuditLogger
@@ -130,6 +132,111 @@ class BackupRepository(
             rows = rows
         )
         return csv.toByteArray(Charsets.UTF_8)
+    }
+
+    /**
+     * Printable PDF statement for a period: summary, category breakdown,
+     * account balances and the transaction list (capped; CSV has everything).
+     */
+    suspend fun createPeriodPdfReport(fromMs: Long, toMs: Long, periodLabel: String): ByteArray {
+        val postingDao = db.postingDao()
+        val income = -postingDao.getPeriodTotal(LedgerType.INCOME_CATEGORY, fromMs, toMs)
+        val expense = postingDao.getPeriodTotal(LedgerType.EXPENSE_CATEGORY, fromMs, toMs)
+        val categories = db.categoryDao().observeAll(true).first().associateBy { it.id }
+
+        val expenseRows = postingDao.observePeriodTotalsByLedger(
+            LedgerType.EXPENSE_CATEGORY, fromMs, toMs
+        ).first().map { row ->
+            PdfRow(
+                categories[row.ledgerId]?.name ?: "অজানা ক্যাটাগরি",
+                BengaliNumber.formatPoisha(row.totalPoisha)
+            ) to kotlin.math.abs(row.totalPoisha)
+        }.sortedByDescending { it.second }.map { it.first }
+
+        val incomeRows = postingDao.observePeriodTotalsByLedger(
+            LedgerType.INCOME_CATEGORY, fromMs, toMs
+        ).first().map { row ->
+            PdfRow(
+                categories[row.ledgerId]?.name ?: "অজানা ক্যাটাগরি",
+                BengaliNumber.formatPoisha(-row.totalPoisha)
+            ) to kotlin.math.abs(row.totalPoisha)
+        }.sortedByDescending { it.second }.map { it.first }
+
+        val accountRows = db.accountDao().observeAll(true).first().map { account ->
+            PdfRow(
+                account.name + if (account.archivedAt != null) " (আর্কাইভ)" else "",
+                BengaliNumber.formatPoisha(
+                    postingDao.getLedgerBalance(LedgerType.ACCOUNT, account.id)
+                )
+            )
+        }
+
+        val transactions = db.transactionDao().observeFiltered(
+            kind = null, categoryId = null, accountId = null, shopId = null,
+            loanId = null, partyId = null, fromMs = fromMs, toMs = toMs,
+            minAmount = null, maxAmount = null, q = "", limit = 100_000
+        ).first().sortedBy { it.occurredAt }
+
+        val transactionRows = buildList {
+            transactions.take(300).forEach { txn ->
+                add(
+                    PdfRow(
+                        "${Dates.formatShortDate(txn.occurredAt)}  ${txn.title}",
+                        BengaliNumber.formatPoisha(txn.amountPoisha)
+                    )
+                )
+            }
+            if (transactions.size > 300) {
+                add(
+                    PdfRow(
+                        "… আরও ${BengaliNumber.formatCount((transactions.size - 300).toLong())}টি লেনদেন (পুরো তালিকার জন্য CSV এক্সপোর্ট নিন)",
+                        small = true
+                    )
+                )
+            }
+        }
+
+        val sections = listOf(
+            PdfSection(
+                "সারাংশ",
+                listOf(
+                    PdfRow("মোট আয়", BengaliNumber.formatPoisha(income)),
+                    PdfRow("মোট খরচ", BengaliNumber.formatPoisha(expense)),
+                    PdfRow(
+                        "হাতে থাকল (আয় − খরচ)",
+                        BengaliNumber.formatPoisha(income - expense),
+                        bold = true
+                    ),
+                    PdfRow(
+                        "ট্রান্সফার, সঞ্চয়, ধার ও ঋণের আসল আয়/খরচ হিসাবে ধরা হয়নি।",
+                        small = true
+                    )
+                )
+            ),
+            PdfSection(
+                "কোথায় খরচ হলো",
+                expenseRows.ifEmpty { listOf(PdfRow("এই সময়ে কোনো খরচ নেই।", small = true)) }
+            ),
+            PdfSection(
+                "কোথা থেকে আয় এল",
+                incomeRows.ifEmpty { listOf(PdfRow("এই সময়ে কোনো আয় নেই।", small = true)) }
+            ),
+            PdfSection(
+                "অ্যাকাউন্টের ব্যালান্স (এখন)",
+                accountRows.ifEmpty { listOf(PdfRow("কোনো অ্যাকাউন্ট নেই।", small = true)) }
+            ),
+            PdfSection(
+                "লেনদেনের তালিকা",
+                transactionRows.ifEmpty {
+                    listOf(PdfRow("এই সময়ে কোনো লেনদেন নেই।", small = true))
+                }
+            )
+        )
+        return PdfExporter.render(
+            title = "হিসাবঘর — হিসাব বিবরণী",
+            subtitle = "$periodLabel • তৈরি: ${Dates.formatShortDate(Dates.nowMs())}",
+            sections = sections
+        )
     }
 
     // ---------------- inspect & restore ----------------

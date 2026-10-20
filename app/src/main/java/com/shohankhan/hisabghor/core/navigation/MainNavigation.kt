@@ -502,17 +502,6 @@ fun MainNavigation() {
     }
 }
 
-private fun androidx.navigation.NavGraphBuilder.placeholder(route: String) {
-    composable(route) { PlaceholderScreen() }
-}
-
-@Composable
-private fun PlaceholderScreen() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("তৈরি হচ্ছে…", style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
 /** Small helper so screens can pop with a NavHostController extension. */
 fun NavHostController.pop() {
     popBackStack()

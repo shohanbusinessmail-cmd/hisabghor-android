@@ -74,7 +74,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-enum class ExportKind { ENCRYPTED_BACKUP, PLAIN_JSON, CSV }
+enum class ExportKind { ENCRYPTED_BACKUP, PLAIN_JSON, CSV, PDF }
 
 data class PendingExport(
     val kind: ExportKind,
@@ -201,6 +201,31 @@ class SettingsViewModel(
         }
     }
 
+    fun createPdfExport(allTime: Boolean) {
+        viewModelScope.launch {
+            _state.update { it.copy(busy = true) }
+            try {
+                val nowMs = Dates.nowMs()
+                val (fromMs, toMs) = if (allTime) 0L to Long.MAX_VALUE
+                else Dates.monthRange(nowMs)
+                val periodLabel = if (allTime) "সব সময়"
+                else "এই মাস (${Dates.formatShortDate(fromMs)} — ${Dates.formatShortDate(nowMs)})"
+                val bytes = backup.createPeriodPdfReport(fromMs, toMs, periodLabel)
+                _state.update {
+                    it.copy(
+                        busy = false,
+                        pendingExport = PendingExport(
+                            ExportKind.PDF, bytes,
+                            "hisabghor_report_${stamp()}.pdf"
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(busy = false, message = "PDF তৈরি করা যায়নি") }
+            }
+        }
+    }
+
     fun onExportWritten(kind: ExportKind) {
         viewModelScope.launch {
             if (kind == ExportKind.ENCRYPTED_BACKUP) {
@@ -213,6 +238,7 @@ class SettingsViewModel(
                         ExportKind.ENCRYPTED_BACKUP -> "এনক্রিপ্ট করা ব্যাকআপ সংরক্ষণ করা হয়েছে"
                         ExportKind.PLAIN_JSON -> "JSON এক্সপোর্ট সংরক্ষণ করা হয়েছে"
                         ExportKind.CSV -> "CSV ফাইল সংরক্ষণ করা হয়েছে"
+                        ExportKind.PDF -> "PDF বিবরণী সংরক্ষণ করা হয়েছে"
                     }
                 )
             }
@@ -326,6 +352,9 @@ fun SettingsScreen(
     val csvLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
     ) { uri -> writeTo(uri, pendingRef) }
+    val pdfLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri -> writeTo(uri, pendingRef) }
 
     LaunchedEffect(state.pendingExport) {
         val export = state.pendingExport ?: return@LaunchedEffect
@@ -334,6 +363,7 @@ fun SettingsScreen(
             ExportKind.ENCRYPTED_BACKUP -> backupLauncher.launch(export.fileName)
             ExportKind.PLAIN_JSON -> jsonLauncher.launch(export.fileName)
             ExportKind.CSV -> csvLauncher.launch(export.fileName)
+            ExportKind.PDF -> pdfLauncher.launch(export.fileName)
         }
     }
 
@@ -500,6 +530,16 @@ fun SettingsScreen(
                         onClick = { viewModel.createCsvExport(allTime = true) },
                         modifier = Modifier.weight(1f)
                     ) { Text("CSV (সব সময়)") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = { viewModel.createPdfExport(allTime = false) },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("PDF বিবরণী (এই মাস)") }
+                    OutlinedButton(
+                        onClick = { viewModel.createPdfExport(allTime = true) },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("PDF বিবরণী (সব সময়)") }
                 }
                 Text(
                     "সতর্কতা: JSON ও CSV ফাইলে কোনো এনক্রিপশন থাকে না — যার হাতে পড়বে সে পড়তে পারবে। নিয়মিত সুরক্ষার জন্য এনক্রিপ্ট করা ব্যাকআপ ব্যবহার করুন।",

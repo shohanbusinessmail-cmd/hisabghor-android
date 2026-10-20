@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 jobs:
@@ -45,6 +45,31 @@ jobs:
           set -o pipefail
           ./gradlew assembleDebug 2>&1 | tee build-apk.log
 
+      # Compile-check the instrumented tests (no emulator on this runner;
+      # they run on a device/emulator locally — see docs/TESTING.md).
+      - name: Compile instrumented tests
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebugAndroidTest 2>&1 | tee build-androidtest.log
+
+      # Room exports its schema during the build; commit it back so the
+      # checked-in schema used by future migrations is always present.
+      - name: Commit generated Room schema
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -e
+          if [ -d app/schemas ] && [ -n "$(git status --porcelain app/schemas)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add app/schemas
+            git commit -m "chore: generated Room schema [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "Room schema unchanged."
+          fi
+
       - name: Upload unit test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -72,15 +97,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set +e
-          touch build-test.log build-apk.log
+          touch build-test.log build-apk.log build-androidtest.log
           {
             echo "### CI failed — run ${{ github.run_id }} · commit ${{ github.sha }}"
             echo '```text'
-            grep -hE "^e: |error:|FAILURE:|What went wrong|> Task .*FAILED|Execution failed" build-test.log build-apk.log 2>/dev/null | head -n 300
+            grep -hE "^e: |error:|FAILURE:|What went wrong|> Task .*FAILED|Execution failed" build-test.log build-apk.log build-androidtest.log 2>/dev/null | head -n 300
             echo "----- tail (test log) -----"
             tail -n 80 build-test.log 2>/dev/null
             echo "----- tail (apk log) -----"
             tail -n 40 build-apk.log 2>/dev/null
+            echo "----- tail (androidTest log) -----"
+            tail -n 40 build-androidtest.log 2>/dev/null
             echo '```'
           } > comment.md
           # GitHub comment body limit is 65536 chars; keep well under it.

@@ -1,0 +1,12 @@
+Copyright (c) 2026 Shohan Khan (helloiamshohan@gmail.com). All rights reserved.
+
+This repository is provided for viewing purposes. No part of this software
+may be copied, modified, distributed, or used in other projects without the
+prior written permission of the copyright holder, except for the owner's own
+personal use of the compiled application.
+
+Open-source libraries used by this app (AndroidX, Jetpack Compose, Room,
+Kotlin and others) remain under their respective licenses.
+
+Note for the owner: replace this file with an MIT/Apache-2.0 license text if
+you decide to open-source the project.
