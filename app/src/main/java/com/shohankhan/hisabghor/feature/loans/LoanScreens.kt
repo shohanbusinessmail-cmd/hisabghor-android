@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -95,6 +96,30 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.ui.text.style.TextAlign
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgBadge
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgListRow
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 // ---------------- loan list ----------------
 
@@ -120,71 +145,93 @@ fun LoanListScreen(
         .filter { it.loan.status == LoanStatus.ACTIVE }
         .sumOf { it.outstandingPoisha }
 
-    Scaffold(
-        topBar = { HisabTopBar(title = "এনজিও ও ব্যাংক ঋণ") },
+    HgScreen(
+        title = "এনজিও ও ব্যাংক ঋণ",
+        subtitle = "কিস্তির হিসাব",
+        insetBottom = false,
         floatingActionButton = {
-            FloatingActionButton(onClick = { showKindDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "নতুন ঋণ যোগ করুন")
-            }
+            ExtendedFloatingActionButton(
+                onClick = { showKindDialog = true },
+                containerColor = Hg.colors.brand,
+                contentColor = androidx.compose.ui.graphics.Color.White,
+                shape = Radius.control,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("নতুন ঋণ", style = MaterialTheme.typography.labelLarge) }
+            )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("মোট আসল বাকি", style = MaterialTheme.typography.bodyMedium)
-                    AmountText(
-                        totalOutstanding,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Danger600
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.md),
+                    padding = PaddingValues(Space.lg)
+                ) {
+                    Eyebrow("মোট আসল বাকি")
+                    Spacer(Modifier.height(Space.xs))
+                    AmountText(totalOutstanding, style = HgAmountType.medium, color = Hg.colors.expense)
+                    Spacer(Modifier.height(Space.xs))
+                    Text(
+                        "ঋণের আসল টাকা আয় নয় — শুধু সুদ ও চার্জ খরচ হিসেবে গণনা হয়।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
                     )
                 }
             }
-            if (loans.isEmpty()) {
-                EmptyState(
-                    icon = Icons.Filled.AccountBalance,
-                    title = "কোনো ঋণ নেই",
-                    subtitle = "এনজিও বা ব্যাংক থেকে নেওয়া কিস্তির ঋণ এখানে রাখুন।",
-                    actionLabel = "ঋণ যোগ করুন",
-                    onAction = { showKindDialog = true }
+            item {
+                Text(
+                    "ঋণসমূহ",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink,
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm)
                 )
+            }
+            if (loans.isEmpty()) {
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.AccountBalance,
+                        title = "কোনো ঋণ নেই",
+                        subtitle = "এনজিও বা ব্যাংক থেকে নেওয়া কিস্তির ঋণ এখানে রাখুন।",
+                        actionLabel = "ঋণ যোগ করুন",
+                        onAction = { showKindDialog = true }
+                    )
+                }
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(loans, key = { it.loan.id }) { item ->
-                        val loan = item.loan
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenLoan(loan.id) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Filled.AccountBalance,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                item {
+                    HgCard(
+                        Modifier.padding(horizontal = ScreenPadding),
+                        padding = PaddingValues(vertical = Space.xs)
+                    ) {
+                        loans.forEachIndexed { index, item ->
+                            val loan = item.loan
+                            HgListRow(
+                                title = loan.organizationName,
+                                subtitle = loan.kind.bnLabel() +
+                                    (loan.branch?.let { " • $it" } ?: "") +
+                                    " • আসল ${formatAmount(loan.principalPoisha)}" +
+                                    if (loan.status == LoanStatus.CLOSED) " • পরিশোধিত" else "",
+                                leading = { IconChip(Icons.Filled.AccountBalance) },
+                                trailing = {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            "আসল বাকি",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Hg.colors.inkTertiary
+                                        )
+                                        AmountText(
+                                            item.outstandingPoisha,
+                                            style = HgAmountType.small,
+                                            color = if (loan.status == LoanStatus.ACTIVE) Hg.colors.expense
+                                            else Hg.colors.inkSecondary
+                                        )
+                                    }
+                                },
+                                onClick = { onOpenLoan(loan.id) }
                             )
-                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                                Text(
-                                    loan.organizationName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    loan.kind.bnLabel() +
-                                        (loan.branch?.let { " • $it" } ?: "") +
-                                        " • আসল ${formatAmount(loan.principalPoisha)}" +
-                                        if (loan.status == LoanStatus.CLOSED) " • পরিশোধিত" else "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("আসল বাকি", style = MaterialTheme.typography.bodySmall)
-                                AmountText(item.outstandingPoisha, color = Danger600)
-                            }
+                            if (index != loans.lastIndex) HgDivider(startInset = 68)
                         }
-                        HorizontalDivider(Modifier.padding(start = 52.dp))
                     }
                 }
             }
@@ -194,23 +241,609 @@ fun LoanListScreen(
     if (showKindDialog) {
         AlertDialog(
             onDismissRequest = { showKindDialog = false },
+            containerColor = Hg.colors.surface,
+            shape = Radius.panel,
             title = { Text("কোন ধরনের ঋণ?") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
+                Column(verticalArrangement = Arrangement.spacedBy(Space.sm)) {
+                    HgButton(
+                        text = "এনজিও ঋণ",
                         onClick = { showKindDialog = false; onNewLoan("NGO") },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("এনজিও ঋণ") }
-                    OutlinedButton(
+                    )
+                    HgButton(
+                        text = "ব্যাংক ঋণ",
                         onClick = { showKindDialog = false; onNewLoan("BANK") },
+                        style = HgButtonStyle.Secondary,
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("ব্যাংক ঋণ") }
+                    )
                 }
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showKindDialog = false }) { Text("বাতিল") }
+                TextButton(onClick = { showKindDialog = false }) {
+                    Text("বাতিল", color = Hg.colors.inkSecondary)
+                }
             }
+        )
+    }
+}
+
+@Composable
+fun LoanEditorScreen(
+    kindArg: String,
+    onBack: () -> Unit,
+    onSaved: () -> Unit
+) {
+    val container = rememberAppContainer()
+    val kind = if (kindArg == "BANK") LoanKind.BANK else LoanKind.NGO
+    val viewModel: LoanEditorViewModel = viewModel(
+        key = "loan_editor_$kindArg",
+        factory = hisabViewModelFactory {
+            LoanEditorViewModel(kind, container.accountRepository, container.loanRepository)
+        }
+    )
+    val state by viewModel.state.collectAsState()
+    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
+    val preview = remember(state) { viewModel.previewSchedule(state) }
+
+    HgScreen(
+        title = if (kind == LoanKind.BANK) "নতুন ব্যাংক ঋণ" else "নতুন এনজিও ঋণ",
+        subtitle = "কিস্তির হিসাব",
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = "ঋণ তৈরি করুন",
+                    onClick = viewModel::save,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    ) { padding ->
+        if (state.loading) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = ScreenPadding)
+        ) {
+            Spacer(Modifier.height(Space.md))
+            HgNotice(
+                title = "ঋণের আসল টাকা আয় নয়",
+                message = "এটি আপনার দেনা হিসেবে থাকবে; শুধু সুদ ও চার্জ খরচ হবে।",
+                tone = HgTone.Neutral
+            )
+            Spacer(Modifier.height(Space.md))
+            HgCard(padding = PaddingValues(Space.lg)) {
+                HgTextField(
+                    value = state.orgName,
+                    onValueChange = { v -> viewModel.update { it.copy(orgName = v) } },
+                    label = "প্রতিষ্ঠানের নাম"
+                )
+                Spacer(Modifier.height(Space.md))
+                HgTextField(
+                    value = state.branch,
+                    onValueChange = { v -> viewModel.update { it.copy(branch = v) } },
+                    label = "শাখা (ঐচ্ছিক)"
+                )
+                Spacer(Modifier.height(Space.md))
+                HgTextField(
+                    value = state.maskedRef,
+                    onValueChange = { v -> viewModel.update { it.copy(maskedRef = v) } },
+                    label = "ঋণ/সদস্য নম্বর (ঐচ্ছিক)"
+                )
+            }
+
+            Spacer(Modifier.height(Space.lg))
+            Text(
+                "টাকার হিসাব",
+                style = MaterialTheme.typography.titleMedium,
+                color = Hg.colors.ink
+            )
+            Spacer(Modifier.height(Space.sm))
+            HgAmountInput(
+                value = state.principalText,
+                onValueChange = { v -> viewModel.update { it.copy(principalText = v) } },
+                error = state.error
+            )
+            Spacer(Modifier.height(Space.md))
+            MoneyInputField(
+                value = state.disbursedText,
+                onValueChange = { v -> viewModel.update { it.copy(disbursedText = v) } },
+                label = "আসলে হাতে পেয়েছেন (কম হলে লিখুন)",
+                helper = "কম পেলে পার্থক্যটা প্রসেসিং চার্জ হিসেবে খরচ দেখানো হবে।"
+            )
+
+            Spacer(Modifier.height(Space.lg))
+            Text(
+                "সুদের পদ্ধতি",
+                style = MaterialTheme.typography.titleMedium,
+                color = Hg.colors.ink
+            )
+            Spacer(Modifier.height(Space.sm))
+            HgSegmented(
+                options = InterestMethod.entries,
+                selected = state.method,
+                label = { it.bnLabel() },
+                onSelect = { method -> viewModel.update { it.copy(method = method) } }
+            )
+            Spacer(Modifier.height(Space.md))
+            when (state.method) {
+                InterestMethod.REDUCING_AMORTIZED -> HgTextField(
+                    value = state.rateText,
+                    onValueChange = { v -> viewModel.update { it.copy(rateText = v) } },
+                    label = "বার্ষিক সুদের হার %",
+                    keyboardType = KeyboardType.Decimal
+                )
+                InterestMethod.FLAT -> {
+                    HgSegmented(
+                        options = FlatInputMode.entries,
+                        selected = state.flatMode,
+                        label = {
+                            when (it) {
+                                FlatInputMode.TOTAL -> "মোট ফেরতযোগ্য"
+                                FlatInputMode.PER_INSTALLMENT -> "প্রতি কিস্তি"
+                                FlatInputMode.RATE -> "বার্ষিক হার"
+                            }
+                        },
+                        onSelect = { mode -> viewModel.update { it.copy(flatMode = mode) } }
+                    )
+                    Spacer(Modifier.height(Space.md))
+                    when (state.flatMode) {
+                        FlatInputMode.TOTAL -> MoneyInputField(
+                            value = state.totalRepayableText,
+                            onValueChange = { v -> viewModel.update { it.copy(totalRepayableText = v) } },
+                            label = "মোট ফেরতযোগ্য (আসল + সুদ)"
+                        )
+                        FlatInputMode.PER_INSTALLMENT -> MoneyInputField(
+                            value = state.perInstallmentText,
+                            onValueChange = { v -> viewModel.update { it.copy(perInstallmentText = v) } },
+                            label = "প্রতি কিস্তির পরিমাণ"
+                        )
+                        FlatInputMode.RATE -> HgTextField(
+                            value = state.rateText,
+                            onValueChange = { v -> viewModel.update { it.copy(rateText = v) } },
+                            label = "বার্ষিক সুদের হার %",
+                            keyboardType = KeyboardType.Decimal
+                        )
+                    }
+                }
+                InterestMethod.SIMPLE -> MoneyInputField(
+                    value = state.totalRepayableText,
+                    onValueChange = { v -> viewModel.update { it.copy(totalRepayableText = v) } },
+                    label = "মোট ফেরতযোগ্য (আসল + সুদ)"
+                )
+                InterestMethod.NONE -> Text(
+                    "সুদ ছাড়া — শুধু আসল সমান কিস্তিতে ভাগ হবে।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Hg.colors.inkSecondary
+                )
+            }
+
+            Spacer(Modifier.height(Space.lg))
+            Text(
+                "কিস্তির সূচি",
+                style = MaterialTheme.typography.titleMedium,
+                color = Hg.colors.ink
+            )
+            Spacer(Modifier.height(Space.sm))
+            HgTextField(
+                value = state.countText,
+                onValueChange = { v -> viewModel.update { it.copy(countText = v) } },
+                label = "কিস্তির সংখ্যা",
+                keyboardType = KeyboardType.Number
+            )
+            Spacer(Modifier.height(Space.md))
+            HgSegmented(
+                options = listOf(InstallmentFrequency.WEEKLY, InstallmentFrequency.MONTHLY),
+                selected = state.frequency,
+                label = { it.bnLabel() },
+                onSelect = { freq -> viewModel.update { it.copy(frequency = freq) } }
+            )
+            Spacer(Modifier.height(Space.md))
+            DateField(
+                date = state.startDate,
+                onDateChange = { v -> viewModel.update { it.copy(startDate = v) } },
+                label = "ঋণ নেওয়ার তারিখ"
+            )
+            Spacer(Modifier.height(Space.md))
+            DateField(
+                date = state.firstDueDate,
+                onDateChange = { v -> viewModel.update { it.copy(firstDueDate = v) } },
+                label = "প্রথম কিস্তির তারিখ"
+            )
+
+            if (preview != null) {
+                Spacer(Modifier.height(Space.lg))
+                HgCard(padding = PaddingValues(vertical = Space.xs)) {
+                    Row(
+                        Modifier.padding(horizontal = Space.lg, vertical = Space.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Eyebrow("কিস্তির পূর্বরূপ")
+                    }
+                    LoanTermLine("প্রতি কিস্তি (সাধারণত)", formatAmount(preview.firstOrNull()?.amountPoisha ?: 0))
+                    LoanTermLine("মোট সুদ", formatAmount(preview.sumOf { it.interestPoisha }))
+                    LoanTermLine("মোট ফেরতযোগ্য", formatAmount(preview.sumOf { it.amountPoisha }))
+                    LoanTermLine(
+                        "শেষ কিস্তির তারিখ",
+                        preview.lastOrNull()
+                            ?.let { Dates.formatShortDate(Dates.startOfDayMs(it.dueDate)) } ?: "-"
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(Space.lg))
+            HgCard(padding = PaddingValues(Space.lg)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("টাকা এখনই পেয়েছেন", style = MaterialTheme.typography.bodyLarge, color = Hg.colors.ink)
+                        Text(
+                            if (state.moneyMovedNow) "অ্যাকাউন্টে টাকা এখনই যোগ হবে"
+                            else "আগের ঋণ — শুধু বাকি হিসেবে যোগ হবে",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Hg.colors.inkSecondary
+                        )
+                    }
+                    Spacer(Modifier.width(Space.md))
+                    Switch(
+                        checked = state.moneyMovedNow,
+                        onCheckedChange = { checked -> viewModel.update { it.copy(moneyMovedNow = checked) } },
+                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                            checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                            checkedTrackColor = Hg.colors.brand,
+                            uncheckedThumbColor = Hg.colors.surface,
+                            uncheckedTrackColor = Hg.colors.surfaceSunken,
+                            uncheckedBorderColor = Hg.colors.hairlineStrong
+                        )
+                    )
+                }
+                if (state.moneyMovedNow) {
+                    Spacer(Modifier.height(Space.md))
+                    SelectionField(
+                        label = "যে অ্যাকাউন্টে টাকা এল",
+                        selectedText = state.accounts.firstOrNull { it.id == state.accountId }?.name ?: "বেছে নিন",
+                        options = state.accounts,
+                        optionLabel = { it.name },
+                        onSelect = { selected -> viewModel.update { it.copy(accountId = selected.id) } }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.note,
+                onValueChange = { v -> viewModel.update { it.copy(note = v) } },
+                label = "মন্তব্য (ঐচ্ছিক)"
+            )
+            state.error?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
+            }
+            Spacer(Modifier.height(Space.xxl))
+        }
+    }
+}
+
+@Composable
+fun LoanDetailScreen(
+    loanId: Long,
+    onBack: () -> Unit,
+    onRecordPayment: (Long) -> Unit,
+    onOpenTransaction: (Long) -> Unit
+) {
+    val container = rememberAppContainer()
+    val viewModel: LoanDetailViewModel = viewModel(
+        key = "loan_detail_$loanId",
+        factory = hisabViewModelFactory {
+            LoanDetailViewModel(loanId, container.loanRepository, container.transactionRepository)
+        }
+    )
+    val state by viewModel.uiState.collectAsState()
+    val loan = state.loan
+    var showCloseConfirm by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var editingInstallment by remember { mutableStateOf<InstallmentEntity?>(null) }
+    val snackbarHost = remember { SnackbarHostState() }
+
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHost.showSnackbar(it)
+            viewModel.clearMessage()
+        }
+    }
+
+    HgScreen(
+        title = loan?.organizationName ?: "ঋণ",
+        subtitle = "কিস্তি ও পরিশোধ",
+        onBack = onBack,
+        bottomBar = { SnackbarHost(snackbarHost, Modifier.navigationBarsPadding()) }
+    ) { padding ->
+        if (state.loading || loan == null) {
+            LoadingState(Modifier.padding(padding))
+            return@HgScreen
+        }
+        val todayMs = Dates.startOfDayMs(Dates.nowMs())
+        val totalScheduled = state.installments.sumOf { it.amountPoisha }
+        val paidScheduled = state.installments.sumOf { it.paidTotalPoisha }
+        val nextDue = state.installments.firstOrNull { it.remainingPoisha > 0 }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = Space.xxl)
+        ) {
+            item {
+                Column(Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Eyebrow("আসল বাকি")
+                        Spacer(Modifier.width(Space.sm))
+                        HgBadge(
+                            text = if (loan.status == LoanStatus.ACTIVE) "চলমান" else "বন্ধ",
+                            tone = if (loan.status == LoanStatus.ACTIVE) HgTone.Brand else HgTone.Neutral
+                        )
+                    }
+                    Spacer(Modifier.height(Space.xs))
+                    AmountText(state.outstandingPoisha, style = HgAmountType.hero, color = Hg.colors.expense)
+                    nextDue?.let {
+                        Spacer(Modifier.height(Space.md))
+                        HgNotice(
+                            title = "পরের কিস্তি ${Dates.formatShortDate(it.dueDate)}",
+                            message = "বাকি ${formatAmount(it.remainingPoisha)}",
+                            tone = if (it.dueDate < todayMs) HgTone.Warning else HgTone.Neutral
+                        )
+                    }
+                    Spacer(Modifier.height(Space.md))
+                    HgButton(
+                        text = "কিস্তি পরিশোধ করুন",
+                        onClick = { onRecordPayment(loanId) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding, vertical = Space.sm),
+                    padding = PaddingValues(vertical = Space.xs)
+                ) {
+                    LoanTermLine("মোট আসল", formatAmount(loan.principalPoisha))
+                    if (loan.disbursedPoisha != loan.principalPoisha) {
+                        LoanTermLine("হাতে পেয়েছিলেন", formatAmount(loan.disbursedPoisha))
+                    }
+                    LoanTermLine("মোট পরিশোধ (নগদ)", formatAmount(state.totalRepaidPoisha))
+                    LoanTermLine(
+                        "কিস্তি অনুযায়ী পরিশোধ",
+                        "${formatAmount(paidScheduled)} / ${formatAmount(totalScheduled)}"
+                    )
+                    loan.branch?.let { LoanTermLine("শাখা", it) }
+                    loan.maskedRef?.let { LoanTermLine("ঋণ/সদস্য নম্বর", it) }
+                    LoanTermLine("সুদের পদ্ধতি", loan.interestMethod.bnLabel())
+                    if (loan.interestRateBp > 0) {
+                        LoanTermLine("সুদের হার", BengaliNumber.formatPercentBp(loan.interestRateBp) + " বার্ষিক")
+                    }
+                    loan.note?.takeIf { it.isNotBlank() }?.let { LoanTermLine("মন্তব্য", it) }
+                }
+            }
+
+            item {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ScreenPadding, vertical = Space.sm),
+                    horizontalArrangement = Arrangement.spacedBy(Space.sm)
+                ) {
+                    HgButton(
+                        text = "কিস্তি পুনঃতৈরি",
+                        onClick = viewModel::regenerateSchedule,
+                        style = HgButtonStyle.Secondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    HgButton(
+                        text = if (loan.status == LoanStatus.ACTIVE) "ঋণ বন্ধ করুন" else "আবার চালু করুন",
+                        onClick = { showCloseConfirm = true },
+                        style = HgButtonStyle.Secondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                HgButton(
+                    text = "ঋণটি মুছে ফেলুন",
+                    onClick = { showDeleteConfirm = true },
+                    style = HgButtonStyle.Ghost,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ScreenPadding)
+                )
+            }
+
+            item {
+                Column(Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)) {
+                    Text(
+                        "কিস্তির তালিকা",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Hg.colors.ink
+                    )
+                    Text(
+                        "বদলাতে কোনো কিস্তিতে চাপ দিন",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                }
+            }
+            item {
+                HgCard(
+                    Modifier.padding(horizontal = ScreenPadding),
+                    padding = PaddingValues(vertical = Space.xs)
+                ) {
+                    state.installments.forEachIndexed { index, inst ->
+                        val statusText = when {
+                            inst.remainingPoisha <= 0 -> "পরিশোধিত"
+                            inst.dueDate < todayMs -> "মেয়াদ পেরিয়েছে"
+                            inst.paidTotalPoisha > 0 -> "আংশিক পরিশোধ"
+                            else -> "আসন্ন"
+                        }
+                        val statusColor = when {
+                            inst.remainingPoisha <= 0 -> Hg.colors.income
+                            inst.dueDate < todayMs -> Hg.colors.expense
+                            else -> Hg.colors.inkSecondary
+                        }
+                        HgListRow(
+                            title = "কিস্তি ${BengaliNumber.formatCount(inst.seq.toLong())} • ${Dates.formatShortDate(inst.dueDate)}",
+                            subtitle = "আসল ${formatAmount(inst.principalPartPoisha)} + সুদ ${formatAmount(inst.interestPartPoisha)}",
+                            trailing = {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    AmountText(inst.amountPoisha, style = HgAmountType.small)
+                                    Text(statusText, style = MaterialTheme.typography.labelSmall, color = statusColor)
+                                    if (inst.paidTotalPoisha > 0 && inst.remainingPoisha > 0) {
+                                        Text(
+                                            "বাকি ${formatAmount(inst.remainingPoisha)}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Hg.colors.inkSecondary
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = { editingInstallment = inst }
+                        )
+                        if (index != state.installments.lastIndex) HgDivider(startInset = Space.lg)
+                    }
+                }
+            }
+
+            item {
+                Text(
+                    "লেনদেনের ইতিহাস",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Hg.colors.ink,
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Space.md)
+                )
+            }
+            if (state.transactions.isEmpty()) {
+                item {
+                    EmptyState(
+                        icon = Icons.Filled.AccountBalance,
+                        title = "কোনো লেনদেন নেই"
+                    )
+                }
+            }
+            items(state.transactions, key = { it.id }) { txn ->
+                Column(Modifier.padding(horizontal = ScreenPadding)) {
+                    TransactionRow(txn, onClick = { onOpenTransaction(txn.id) })
+                    HgDivider(startInset = 52)
+                }
+            }
+        }
+    }
+
+    if (showCloseConfirm && loan != null) {
+        val closing = loan.status == LoanStatus.ACTIVE
+        ConfirmDialog(
+            title = if (closing) "ঋণ বন্ধ করবেন?" else "ঋণ আবার চালু করবেন?",
+            message = if (closing) "বন্ধ করলে ঋণটি চলমান তালিকায় থাকবে না। হিসাবের অঙ্ক বদলাবে না।"
+            else "ঋণটি আবার চলমান হিসেবে দেখানো হবে।",
+            confirmText = if (closing) "বন্ধ করুন" else "চালু করুন",
+            onConfirm = {
+                viewModel.setStatus(if (closing) LoanStatus.CLOSED else LoanStatus.ACTIVE)
+                showCloseConfirm = false
+            },
+            onDismiss = { showCloseConfirm = false }
+        )
+    }
+
+    if (showDeleteConfirm) {
+        ConfirmDialog(
+            title = "ঋণ মুছে ফেলবেন?",
+            message = "শুধু কোনো লেনদেন না থাকলে মুছে ফেলা যাবে।",
+            confirmText = "মুছে ফেলুন",
+            onConfirm = {
+                showDeleteConfirm = false
+                viewModel.deleteIfUnused(onDeleted = onBack)
+            },
+            onDismiss = { showDeleteConfirm = false }
+        )
+    }
+
+    editingInstallment?.let { inst ->
+        var dueDate by remember(inst.id) { mutableStateOf(Dates.toLocalDate(inst.dueDate)) }
+        var principalText by remember(inst.id) { mutableStateOf(poishaToInputText(inst.principalPartPoisha)) }
+        var interestText by remember(inst.id) { mutableStateOf(poishaToInputText(inst.interestPartPoisha)) }
+        var dialogError by remember(inst.id) { mutableStateOf<String?>(null) }
+        AlertDialog(
+            onDismissRequest = { editingInstallment = null },
+            containerColor = Hg.colors.surface,
+            shape = Radius.panel,
+            title = { Text("কিস্তি ${BengaliNumber.formatCount(inst.seq.toLong())} বদলান") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
+                    DateField(date = dueDate, onDateChange = { dueDate = it }, label = "কিস্তির তারিখ")
+                    MoneyInputField(
+                        value = principalText,
+                        onValueChange = { principalText = it },
+                        label = "আসল অংশ (টাকা)",
+                        error = dialogError
+                    )
+                    MoneyInputField(
+                        value = interestText,
+                        onValueChange = { interestText = it },
+                        label = "সুদ অংশ (টাকা)"
+                    )
+                    Text(
+                        "ইতিমধ্যে পরিশোধিত অংশের চেয়ে কমানো যাবে না।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val p = BengaliNumber.parsePoisha(principalText)
+                    val i = BengaliNumber.parsePoisha(interestText)
+                    if (p == null || i == null || p < inst.paidPrincipalPoisha || i < inst.paidInterestPoisha) {
+                        dialogError = "অঙ্ক ঠিক করুন (পরিশোধিতের কম হতে পারবে না)"
+                    } else {
+                        viewModel.updateInstallment(
+                            inst.copy(
+                                dueDate = Dates.startOfDayMs(dueDate),
+                                principalPartPoisha = p,
+                                interestPartPoisha = i,
+                                amountPoisha = p + i + inst.feePartPoisha
+                            )
+                        )
+                        editingInstallment = null
+                    }
+                }) { Text("সংরক্ষণ করুন", color = Hg.colors.brand) }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingInstallment = null }) {
+                    Text("বাতিল", color = Hg.colors.inkSecondary)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun LoanTermLine(label: String, value: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Space.lg, vertical = Space.sm)
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.inkSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.ink,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1.4f)
         )
     }
 }
@@ -389,248 +1022,6 @@ class LoanEditorViewModel(
     }
 }
 
-@Composable
-fun LoanEditorScreen(
-    kindArg: String,
-    onBack: () -> Unit,
-    onSaved: () -> Unit
-) {
-    val container = rememberAppContainer()
-    val kind = if (kindArg == "BANK") LoanKind.BANK else LoanKind.NGO
-    val viewModel: LoanEditorViewModel = viewModel(
-        key = "loan_editor_$kindArg",
-        factory = hisabViewModelFactory {
-            LoanEditorViewModel(kind, container.accountRepository, container.loanRepository)
-        }
-    )
-    val state by viewModel.state.collectAsState()
-    LaunchedEffect(state.saved) { if (state.saved) onSaved() }
-    val preview = remember(state) { viewModel.previewSchedule(state) }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (kind == LoanKind.BANK) "নতুন ব্যাংক ঋণ" else "নতুন এনজিও ঋণ",
-                onBack = onBack
-            )
-        }
-    ) { padding ->
-        if (state.loading) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                "ঋণের আসল টাকা আয় নয় — এটি আপনার দেনা হিসেবে থাকবে; শুধু সুদ/চার্জ খরচ হবে।",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            OutlinedTextField(
-                value = state.orgName,
-                onValueChange = { v -> viewModel.update { it.copy(orgName = v) } },
-                label = { Text("প্রতিষ্ঠানের নাম") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.branch,
-                onValueChange = { v -> viewModel.update { it.copy(branch = v) } },
-                label = { Text("শাখা (ঐচ্ছিক)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = state.maskedRef,
-                onValueChange = { v -> viewModel.update { it.copy(maskedRef = v) } },
-                label = { Text("ঋণ/সদস্য নম্বর (ঐচ্ছিক)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            MoneyInputField(
-                value = state.principalText,
-                onValueChange = { v -> viewModel.update { it.copy(principalText = v) } },
-                label = "ঋণের আসল পরিমাণ (টাকা)",
-                error = state.error
-            )
-            MoneyInputField(
-                value = state.disbursedText,
-                onValueChange = { v -> viewModel.update { it.copy(disbursedText = v) } },
-                label = "আসলে হাতে পেয়েছেন (কম হলে লিখুন)"
-            )
-            Text(
-                "হাতে পাওয়া টাকা আসলের কম হলে পার্থক্যটা প্রসেসিং চার্জ হিসেবে খরচ দেখানো হবে।",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text("সুদের পদ্ধতি", style = MaterialTheme.typography.titleSmall)
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                InterestMethod.entries.forEach { method ->
-                    FilterChip(
-                        selected = state.method == method,
-                        onClick = { viewModel.update { it.copy(method = method) } },
-                        label = { Text(method.bnLabel()) }
-                    )
-                }
-            }
-            when (state.method) {
-                InterestMethod.REDUCING_AMORTIZED -> {
-                    OutlinedTextField(
-                        value = state.rateText,
-                        onValueChange = { v -> viewModel.update { it.copy(rateText = v) } },
-                        label = { Text("বার্ষিক সুদের হার %") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                InterestMethod.FLAT -> {
-                    Text("কীভাবে হিসাব করবেন?", style = MaterialTheme.typography.titleSmall)
-                    Row(
-                        Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = state.flatMode == FlatInputMode.TOTAL,
-                            onClick = { viewModel.update { it.copy(flatMode = FlatInputMode.TOTAL) } },
-                            label = { Text("মোট ফেরতযোগ্য") }
-                        )
-                        FilterChip(
-                            selected = state.flatMode == FlatInputMode.PER_INSTALLMENT,
-                            onClick = { viewModel.update { it.copy(flatMode = FlatInputMode.PER_INSTALLMENT) } },
-                            label = { Text("প্রতি কিস্তি") }
-                        )
-                        FilterChip(
-                            selected = state.flatMode == FlatInputMode.RATE,
-                            onClick = { viewModel.update { it.copy(flatMode = FlatInputMode.RATE) } },
-                            label = { Text("বার্ষিক হার") }
-                        )
-                    }
-                    when (state.flatMode) {
-                        FlatInputMode.TOTAL -> MoneyInputField(
-                            value = state.totalRepayableText,
-                            onValueChange = { v -> viewModel.update { it.copy(totalRepayableText = v) } },
-                            label = "মোট ফেরতযোগ্য (আসল + সুদ)"
-                        )
-                        FlatInputMode.PER_INSTALLMENT -> MoneyInputField(
-                            value = state.perInstallmentText,
-                            onValueChange = { v -> viewModel.update { it.copy(perInstallmentText = v) } },
-                            label = "প্রতি কিস্তির পরিমাণ"
-                        )
-                        FlatInputMode.RATE -> OutlinedTextField(
-                            value = state.rateText,
-                            onValueChange = { v -> viewModel.update { it.copy(rateText = v) } },
-                            label = { Text("বার্ষিক সুদের হার %") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-                InterestMethod.SIMPLE -> MoneyInputField(
-                    value = state.totalRepayableText,
-                    onValueChange = { v -> viewModel.update { it.copy(totalRepayableText = v) } },
-                    label = "মোট ফেরতযোগ্য (আসল + সুদ)"
-                )
-                InterestMethod.NONE -> Text(
-                    "সুদ ছাড়া — শুধু আসল সমান কিস্তিতে ভাগ হবে।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            OutlinedTextField(
-                value = state.countText,
-                onValueChange = { v -> viewModel.update { it.copy(countText = v) } },
-                label = { Text("কিস্তির সংখ্যা") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text("কিস্তির ব্যবধান", style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(InstallmentFrequency.WEEKLY, InstallmentFrequency.MONTHLY).forEach { freq ->
-                    FilterChip(
-                        selected = state.frequency == freq,
-                        onClick = { viewModel.update { it.copy(frequency = freq) } },
-                        label = { Text(freq.bnLabel()) }
-                    )
-                }
-            }
-            DateField(
-                date = state.startDate,
-                onDateChange = { v -> viewModel.update { it.copy(startDate = v) } },
-                label = "ঋণ নেওয়ার তারিখ"
-            )
-            DateField(
-                date = state.firstDueDate,
-                onDateChange = { v -> viewModel.update { it.copy(firstDueDate = v) } },
-                label = "প্রথম কিস্তির তারিখ"
-            )
-            if (preview != null) {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("কিস্তির পূর্বরূপ", style = MaterialTheme.typography.titleSmall)
-                        KvRow(
-                            "প্রতি কিস্তি (সাধারণত)",
-                            formatAmount(preview.firstOrNull()?.amountPoisha ?: 0)
-                        )
-                        KvRow("মোট সুদ", formatAmount(preview.sumOf { it.interestPoisha }))
-                        KvRow("মোট ফেরতযোগ্য", formatAmount(preview.sumOf { it.amountPoisha }))
-                        KvRow(
-                            "শেষ কিস্তির তারিখ",
-                            preview.lastOrNull()?.let { Dates.formatShortDate(Dates.startOfDayMs(it.dueDate)) } ?: "-"
-                        )
-                    }
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(Modifier.weight(1f)) {
-                    Text("টাকা এখনই পেয়েছেন", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        if (state.moneyMovedNow) "অ্যাকাউন্টে টাকা এখনই যোগ হবে"
-                        else "আগের ঋণ — শুধু বাকি হিসেবে যোগ হবে",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = state.moneyMovedNow,
-                    onCheckedChange = { checked -> viewModel.update { it.copy(moneyMovedNow = checked) } }
-                )
-            }
-            if (state.moneyMovedNow) {
-                SelectionField(
-                    label = "যে অ্যাকাউন্টে টাকা এল",
-                    selectedText = state.accounts.firstOrNull { it.id == state.accountId }?.name ?: "বেছে নিন",
-                    options = state.accounts,
-                    optionLabel = { it.name },
-                    onSelect = { selected -> viewModel.update { it.copy(accountId = selected.id) } }
-                )
-            }
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = { v -> viewModel.update { it.copy(note = v) } },
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                Text("ঋণ তৈরি করুন")
-            }
-            Spacer(Modifier.height(12.dp))
-        }
-    }
-}
-
 // ---------------- loan detail ----------------
 
 data class LoanDetailUiState(
@@ -709,249 +1100,3 @@ class LoanDetailViewModel(
     }
 }
 
-@Composable
-fun LoanDetailScreen(
-    loanId: Long,
-    onBack: () -> Unit,
-    onRecordPayment: (Long) -> Unit,
-    onOpenTransaction: (Long) -> Unit
-) {
-    val container = rememberAppContainer()
-    val viewModel: LoanDetailViewModel = viewModel(
-        key = "loan_detail_$loanId",
-        factory = hisabViewModelFactory {
-            LoanDetailViewModel(loanId, container.loanRepository, container.transactionRepository)
-        }
-    )
-    val state by viewModel.uiState.collectAsState()
-    val loan = state.loan
-    var showCloseConfirm by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-    var editingInstallment by remember { mutableStateOf<InstallmentEntity?>(null) }
-    val snackbarHost = remember { SnackbarHostState() }
-
-    LaunchedEffect(state.message) {
-        state.message?.let {
-            snackbarHost.showSnackbar(it)
-            viewModel.clearMessage()
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            HisabTopBar(title = loan?.organizationName ?: "ঋণ", onBack = onBack)
-        },
-        snackbarHost = { SnackbarHost(snackbarHost) }
-    ) { padding ->
-        if (state.loading || loan == null) {
-            LoadingState(Modifier.padding(padding))
-            return@Scaffold
-        }
-        val todayMs = Dates.startOfDayMs(Dates.nowMs())
-        val totalScheduled = state.installments.sumOf { it.amountPoisha }
-        val paidScheduled = state.installments.sumOf { it.paidTotalPoisha }
-        val nextDue = state.installments.firstOrNull { it.remainingPoisha > 0 }
-        LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-            item {
-                Card(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("আসল বাকি", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            formatAmount(state.outstandingPoisha),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Danger600
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        KvRow("মোট আসল", formatAmount(loan.principalPoisha))
-                        if (loan.disbursedPoisha != loan.principalPoisha) {
-                            KvRow("হাতে পেয়েছিলেন", formatAmount(loan.disbursedPoisha))
-                        }
-                        KvRow("মোট পরিশোধ (নগদ)", formatAmount(state.totalRepaidPoisha))
-                        KvRow(
-                            "কিস্তি অনুযায়ী পরিশোধ",
-                            "${formatAmount(paidScheduled)} / ${formatAmount(totalScheduled)}"
-                        )
-                        loan.branch?.let { KvRow("শাখা", it) }
-                        loan.maskedRef?.let { KvRow("ঋণ/সদস্য নম্বর", it) }
-                        KvRow("সুদের পদ্ধতি", loan.interestMethod.bnLabel())
-                        if (loan.interestRateBp > 0) {
-                            KvRow("সুদের হার", BengaliNumber.formatPercentBp(loan.interestRateBp) + " (বার্ষিক)")
-                        }
-                        nextDue?.let {
-                            KvRow(
-                                "পরের কিস্তি",
-                                "${Dates.formatShortDate(it.dueDate)} — ${formatAmount(it.remainingPoisha)}"
-                            )
-                        }
-                        KvRow(
-                            "অবস্থা",
-                            if (loan.status == LoanStatus.ACTIVE) "চলমান" else "পরিশোধিত/বন্ধ"
-                        )
-                        loan.note?.let { KvRow("মন্তব্য", it) }
-                        Spacer(Modifier.height(10.dp))
-                        Button(
-                            onClick = { onRecordPayment(loanId) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("কিস্তি পরিশোধ করুন") }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            OutlinedButton(
-                                onClick = viewModel::regenerateSchedule,
-                                modifier = Modifier.weight(1f)
-                            ) { Text("কিস্তি পুনঃতৈরি") }
-                            OutlinedButton(
-                                onClick = { showCloseConfirm = true },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(if (loan.status == LoanStatus.ACTIVE) "ঋণ বন্ধ করুন" else "আবার চালু করুন")
-                            }
-                        }
-                        TextButton(onClick = { showDeleteConfirm = true }) {
-                            Text("ঋণটি মুছে ফেলুন", color = Danger600)
-                        }
-                    }
-                }
-                Text(
-                    "কিস্তির তালিকা (বদলাতে কোনো কিস্তিতে চাপ দিন)",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-            items(state.installments, key = { it.id }) { inst ->
-                val statusText = when {
-                    inst.remainingPoisha <= 0 -> "পরিশোধিত"
-                    inst.dueDate < todayMs -> "মেয়াদ পেরিয়েছে!"
-                    inst.paidTotalPoisha > 0 -> "আংশিক পরিশোধ"
-                    else -> "আসন্ন"
-                }
-                val statusColor = when {
-                    inst.remainingPoisha <= 0 -> MaterialTheme.colorScheme.primary
-                    inst.dueDate < todayMs -> Danger600
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                }
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { editingInstallment = inst }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "কিস্তি ${BengaliNumber.formatCount(inst.seq.toLong())} • ${Dates.formatShortDate(inst.dueDate)}",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            "আসল ${formatAmount(inst.principalPartPoisha)} + সুদ ${formatAmount(inst.interestPartPoisha)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        AmountText(inst.amountPoisha)
-                        Text(statusText, style = MaterialTheme.typography.bodySmall, color = statusColor)
-                        if (inst.paidTotalPoisha > 0 && inst.remainingPoisha > 0) {
-                            Text(
-                                "বাকি ${formatAmount(inst.remainingPoisha)}",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                }
-                HorizontalDivider(Modifier.padding(start = 16.dp))
-            }
-            item {
-                Text(
-                    "লেনদেনের ইতিহাস",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            items(state.transactions, key = { it.id }) { txn ->
-                TransactionRow(txn, onClick = { onOpenTransaction(txn.id) })
-                HorizontalDivider(Modifier.padding(start = 70.dp))
-            }
-        }
-    }
-
-    if (showCloseConfirm && loan != null) {
-        val closing = loan.status == LoanStatus.ACTIVE
-        ConfirmDialog(
-            title = if (closing) "ঋণ বন্ধ করবেন?" else "ঋণ আবার চালু করবেন?",
-            message = if (closing) "বন্ধ করলে ঋণটি চলমান তালিকায় থাকবে না। হিসাবের অঙ্ক বদলাবে না।"
-            else "ঋণটি আবার চলমান হিসেবে দেখানো হবে।",
-            confirmText = if (closing) "বন্ধ করুন" else "চালু করুন",
-            onConfirm = {
-                viewModel.setStatus(if (closing) LoanStatus.CLOSED else LoanStatus.ACTIVE)
-                showCloseConfirm = false
-            },
-            onDismiss = { showCloseConfirm = false }
-        )
-    }
-
-    if (showDeleteConfirm) {
-        ConfirmDialog(
-            title = "ঋণ মুছে ফেলবেন?",
-            message = "শুধু কোনো লেনদেন না থাকলে মুছে ফেলা যাবে।",
-            confirmText = "মুছে ফেলুন",
-            onConfirm = {
-                showDeleteConfirm = false
-                viewModel.deleteIfUnused(onDeleted = onBack)
-            },
-            onDismiss = { showDeleteConfirm = false }
-        )
-    }
-
-    editingInstallment?.let { inst ->
-        var dueDate by remember(inst.id) { mutableStateOf(Dates.toLocalDate(inst.dueDate)) }
-        var principalText by remember(inst.id) { mutableStateOf(poishaToInputText(inst.principalPartPoisha)) }
-        var interestText by remember(inst.id) { mutableStateOf(poishaToInputText(inst.interestPartPoisha)) }
-        var dialogError by remember(inst.id) { mutableStateOf<String?>(null) }
-        AlertDialog(
-            onDismissRequest = { editingInstallment = null },
-            title = { Text("কিস্তি ${BengaliNumber.formatCount(inst.seq.toLong())} বদলান") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DateField(date = dueDate, onDateChange = { dueDate = it }, label = "কিস্তির তারিখ")
-                    MoneyInputField(
-                        value = principalText,
-                        onValueChange = { principalText = it },
-                        label = "আসল অংশ (টাকা)",
-                        error = dialogError
-                    )
-                    MoneyInputField(
-                        value = interestText,
-                        onValueChange = { interestText = it },
-                        label = "সুদ অংশ (টাকা)"
-                    )
-                    Text(
-                        "ইতিমধ্যে পরিশোধিত অংশের চেয়ে কমানো যাবে না।",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val p = BengaliNumber.parsePoisha(principalText)
-                    val i = BengaliNumber.parsePoisha(interestText)
-                    if (p == null || i == null || p < inst.paidPrincipalPoisha || i < inst.paidInterestPoisha) {
-                        dialogError = "অঙ্ক ঠিক করুন (পরিশোধিতের কম হতে পারবে না)"
-                    } else {
-                        viewModel.updateInstallment(
-                            inst.copy(
-                                dueDate = Dates.startOfDayMs(dueDate),
-                                principalPartPoisha = p,
-                                interestPartPoisha = i,
-                                amountPoisha = p + i + inst.feePartPoisha
-                            )
-                        )
-                        editingInstallment = null
-                    }
-                }) { Text("সংরক্ষণ করুন") }
-            },
-            dismissButton = {
-                TextButton(onClick = { editingInstallment = null }) { Text("বাতিল") }
-            }
-        )
-    }
-}

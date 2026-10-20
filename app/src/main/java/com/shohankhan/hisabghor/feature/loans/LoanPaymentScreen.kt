@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,6 +56,20 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.foundation.layout.PaddingValues
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 data class LoanPaymentUiState(
     val loading: Boolean = true,
@@ -281,68 +296,75 @@ fun LoanPaymentScreen(
     val loan = state.loan
     val isLend = loan?.kind == LoanKind.PERSONAL_LEND
 
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = when {
-                    isLend -> "ফেরত পেলাম"
-                    editId > 0 -> "পরিশোধ সম্পাদনা"
-                    else -> "কিস্তি/ঋণ পরিশোধ"
-                },
-                onBack = onBack
-            )
+    HgScreen(
+        title = when {
+            isLend -> "ফেরত পেলাম"
+            editId > 0 -> "পরিশোধ সম্পাদনা"
+            else -> "কিস্তি পরিশোধ"
+        },
+        subtitle = loan?.organizationName,
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                HgButton(
+                    text = "সংরক্ষণ করুন",
+                    onClick = viewModel::save,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     ) { padding ->
         if (state.loading) {
             LoadingState(Modifier.padding(padding))
-            return@Scaffold
+            return@HgScreen
         }
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = ScreenPadding)
         ) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
+            Spacer(Modifier.height(Space.md))
+            HgCard(padding = PaddingValues(Space.lg)) {
+                Eyebrow(if (isLend) "পাওনা বাকি" else "আসল বাকি")
+                Spacer(Modifier.height(Space.xs))
+                AmountText(
+                    state.outstandingPoisha,
+                    style = HgAmountType.large,
+                    color = if (isLend) Hg.colors.income else Hg.colors.expense
+                )
+                state.nextDueText?.let {
+                    Spacer(Modifier.height(Space.xs))
                     Text(
-                        loan?.organizationName ?: "",
-                        style = MaterialTheme.typography.titleMedium
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
                     )
-                    KvRow(
-                        if (isLend) "পাওনা বাকি" else "আসল বাকি",
-                        formatAmount(state.outstandingPoisha)
-                    )
-                    state.nextDueText?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
 
+            Spacer(Modifier.height(Space.lg))
             if (isLend) {
-                MoneyInputField(
+                HgNotice(
+                    title = "আসল ফেরত আয় নয়",
+                    message = "শুধু সুদ/লাভের অংশটুকু আয় হিসেবে গণনা হবে।",
+                    tone = HgTone.Neutral
+                )
+                Spacer(Modifier.height(Space.md))
+                HgAmountInput(
                     value = state.totalText,
                     onValueChange = { v -> viewModel.update { it.copy(totalText = v) } },
-                    label = "ফেরত পাওয়া আসল (টাকা)",
                     error = state.error
                 )
+                Spacer(Modifier.height(Space.md))
                 MoneyInputField(
                     value = state.lendInterestText,
                     onValueChange = { v -> viewModel.update { it.copy(lendInterestText = v) } },
                     label = "সুদ/লাভ পেলে লিখুন (ঐচ্ছিক)"
                 )
-                Text(
-                    "আসল ফেরত আয় নয়; শুধু সুদ/লাভ অংশটুকু আয় হিসাবে গণনা হবে।",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 if (state.lendInterestText.isNotBlank()) {
+                    Spacer(Modifier.height(Space.md))
                     SelectionField(
                         label = "সুদের আয় ক্যাটাগরি",
                         selectedText = state.incomeCategories
@@ -353,6 +375,7 @@ fun LoanPaymentScreen(
                         onSelect = { selected -> viewModel.update { it.copy(interestCategoryId = selected.id) } }
                     )
                 }
+                Spacer(Modifier.height(Space.md))
                 SelectionField(
                     label = "যে অ্যাকাউন্টে টাকা এল",
                     selectedText = state.accounts.firstOrNull { it.id == state.accountId }?.name ?: "বেছে নিন",
@@ -361,12 +384,12 @@ fun LoanPaymentScreen(
                     onSelect = { selected -> viewModel.update { it.copy(accountId = selected.id) } }
                 )
             } else {
-                MoneyInputField(
+                HgAmountInput(
                     value = state.totalText,
                     onValueChange = { v -> viewModel.update { it.copy(totalText = v) } },
-                    label = "মোট পরিশোধ (টাকা)",
                     error = state.error
                 )
+                Spacer(Modifier.height(Space.md))
                 SelectionField(
                     label = "যে অ্যাকাউন্ট থেকে পরিশোধ করলেন",
                     selectedText = state.accounts.firstOrNull { it.id == state.accountId }?.name ?: "বেছে নিন",
@@ -374,42 +397,57 @@ fun LoanPaymentScreen(
                     optionLabel = { it.name },
                     onSelect = { selected -> viewModel.update { it.copy(accountId = selected.id) } }
                 )
+                Spacer(Modifier.height(Space.md))
                 MoneyInputField(
                     value = state.feeText,
                     onValueChange = { v -> viewModel.update { it.copy(feeText = v) } },
                     label = "এর মধ্যে চার্জ/জরিমানা থাকলে (ঐচ্ছিক)"
                 )
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("আসল/সুদের ভাগ নিজে দেব", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            if (state.manualSplit) "নিচে আসল ও সুদ আলাদা করে দিন"
-                            else "কিস্তির তালিকা অনুযায়ী স্বয়ংক্রিয় ভাগ হবে",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                Spacer(Modifier.height(Space.md))
+                HgCard(padding = PaddingValues(Space.lg)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "আসল/সুদের ভাগ নিজে দেব",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Hg.colors.ink
+                            )
+                            Text(
+                                if (state.manualSplit) "নিচে আসল ও সুদ আলাদা করে দিন"
+                                else "কিস্তির তালিকা অনুযায়ী স্বয়ংক্রিয় ভাগ হবে",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Hg.colors.inkSecondary
+                            )
+                        }
+                        Spacer(Modifier.width(Space.md))
+                        Switch(
+                            checked = state.manualSplit,
+                            onCheckedChange = { checked -> viewModel.update { it.copy(manualSplit = checked) } },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                checkedTrackColor = Hg.colors.brand,
+                                uncheckedThumbColor = Hg.colors.surface,
+                                uncheckedTrackColor = Hg.colors.surfaceSunken,
+                                uncheckedBorderColor = Hg.colors.hairlineStrong
+                            )
                         )
                     }
-                    Switch(
-                        checked = state.manualSplit,
-                        onCheckedChange = { checked -> viewModel.update { it.copy(manualSplit = checked) } }
-                    )
+                    if (state.manualSplit) {
+                        Spacer(Modifier.height(Space.md))
+                        MoneyInputField(
+                            value = state.manualPrincipalText,
+                            onValueChange = { v -> viewModel.update { it.copy(manualPrincipalText = v) } },
+                            label = "আসল অংশ (টাকা)"
+                        )
+                        Spacer(Modifier.height(Space.md))
+                        MoneyInputField(
+                            value = state.manualInterestText,
+                            onValueChange = { v -> viewModel.update { it.copy(manualInterestText = v) } },
+                            label = "সুদ অংশ (টাকা)"
+                        )
+                    }
                 }
-                if (state.manualSplit) {
-                    MoneyInputField(
-                        value = state.manualPrincipalText,
-                        onValueChange = { v -> viewModel.update { it.copy(manualPrincipalText = v) } },
-                        label = "আসল অংশ (টাকা)"
-                    )
-                    MoneyInputField(
-                        value = state.manualInterestText,
-                        onValueChange = { v -> viewModel.update { it.copy(manualInterestText = v) } },
-                        label = "সুদ অংশ (টাকা)"
-                    )
-                }
+                Spacer(Modifier.height(Space.md))
                 SelectionField(
                     label = "সুদ/চার্জের খরচ ক্যাটাগরি",
                     selectedText = state.expenseCategories
@@ -419,31 +457,31 @@ fun LoanPaymentScreen(
                     optionLabel = { it.name },
                     onSelect = { selected -> viewModel.update { it.copy(interestCategoryId = selected.id) } }
                 )
-                OutlinedTextField(
+                Spacer(Modifier.height(Space.md))
+                HgTextField(
                     value = state.receiptNo,
                     onValueChange = { v -> viewModel.update { it.copy(receiptNo = v) } },
-                    label = { Text("রসিদ/ভাউচার নম্বর (ঐচ্ছিক)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    label = "রসিদ/ভাউচার নম্বর (ঐচ্ছিক)"
                 )
             }
 
+            Spacer(Modifier.height(Space.md))
             DateField(
                 date = state.date,
                 onDateChange = { v -> viewModel.update { it.copy(date = v) } },
                 label = "তারিখ"
             )
-            OutlinedTextField(
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
                 value = state.note,
                 onValueChange = { v -> viewModel.update { it.copy(note = v) } },
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
+                label = "মন্তব্য (ঐচ্ছিক)"
             )
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                Text("সংরক্ষণ করুন")
+            state.error?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Space.xxl))
         }
     }
 }
