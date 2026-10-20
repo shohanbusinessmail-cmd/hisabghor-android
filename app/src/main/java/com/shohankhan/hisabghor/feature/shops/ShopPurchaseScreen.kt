@@ -1,6 +1,8 @@
 package com.shohankhan.hisabghor.feature.shops
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -61,6 +63,30 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.size
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgDivider
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgNotice
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.HgTone
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
 
 data class ShopPurchaseUiState(
     val loading: Boolean = true,
@@ -252,47 +278,56 @@ fun ShopPurchaseScreen(
     val state by viewModel.state.collectAsState()
     LaunchedEffect(state.saved) { if (state.saved) onSaved() }
 
-    Scaffold(
-        topBar = {
-            HisabTopBar(
-                title = if (editId > 0) "ক্রয় সম্পাদনা" else "নতুন ক্রয় — ${state.shopName}",
-                onBack = onBack
-            )
+    HgScreen(
+        title = if (editId > 0) "ক্রয় সম্পাদনা" else "নতুন বাকি ক্রয়",
+        subtitle = state.shopName.ifBlank { null },
+        onBack = onBack,
+        bottomBar = {
+            HgFormBottomBar {
+                Column(Modifier.weight(1f)) {
+                    Eyebrow("বকেয়া থাকবে")
+                    Text(
+                        state.dueAfterPoisha?.let { formatAmount(it) } ?: "৳০",
+                        style = HgAmountType.medium,
+                        color = Hg.colors.warning
+                    )
+                }
+                HgButton(
+                    text = if (state.saving) "সংরক্ষণ হচ্ছে…" else "সংরক্ষণ করুন",
+                    onClick = viewModel::save,
+                    enabled = !state.saving,
+                    modifier = Modifier.weight(1.2f)
+                )
+            }
         }
     ) { padding ->
         if (state.loading) {
             LoadingState(Modifier.padding(padding))
-            return@Scaffold
+            return@HgScreen
         }
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = ScreenPadding)
         ) {
-            Text(
-                "ক্রয়ের পুরো টাকাই খরচ হিসেবে এখনই ধরা হবে; যেটুকু এখন দিলেন না, সেটুকু দোকানের বকেয়া থাকবে। পরে পরিশোধ করলে আবার খরচ ধরা হবে না।",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            OutlinedTextField(
-                value = state.title,
-                onValueChange = { v -> viewModel.update { it.copy(title = v) } },
-                label = { Text("শিরোনাম (ঐচ্ছিক)") },
-                placeholder = { Text("যেমন: সাপ্তাহিক বাজার") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Spacer(Modifier.height(Space.md))
             if (state.items.isEmpty()) {
-                MoneyInputField(
+                HgAmountInput(
                     value = state.amountText,
                     onValueChange = { v -> viewModel.update { it.copy(amountText = v) } },
-                    label = "মোট ক্রয়ের পরিমাণ (টাকা)",
                     error = state.errors["amount"]
                 )
             }
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
+                value = state.title,
+                onValueChange = { v -> viewModel.update { it.copy(title = v) } },
+                label = "শিরোনাম (ঐচ্ছিক)",
+                placeholder = "যেমন: সাপ্তাহিক বাজার"
+            )
+            Spacer(Modifier.height(Space.md))
             SelectionField(
                 label = "খরচের ক্যাটাগরি",
                 selectedText = state.categories.firstOrNull { it.id == state.categoryId }?.name ?: "বেছে নিন",
@@ -302,68 +337,36 @@ fun ShopPurchaseScreen(
                 error = state.errors["category"]
             )
 
-            // Items
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("পণ্যের বিবরণ (ঐচ্ছিক)", style = MaterialTheme.typography.titleSmall)
-                OutlinedButton(onClick = viewModel::addItem) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Text("পণ্য যোগ")
+            Spacer(Modifier.height(Space.lg))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "পণ্যের বিবরণ",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Hg.colors.ink
+                    )
+                    Text(
+                        "ঐচ্ছিক — পণ্য অনুযায়ী ভাগ করে লিখতে পারেন",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Hg.colors.inkSecondary
+                    )
+                }
+                TextButton(onClick = viewModel::addItem) {
+                    Text("যোগ করুন", color = Hg.colors.brand)
                 }
             }
             state.items.forEach { item ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            OutlinedTextField(
-                                value = item.name,
-                                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(name = v) } },
-                                label = { Text("পণ্যের নাম") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { viewModel.removeItem(item.key) }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "পণ্য সরান")
-                            }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = item.quantity,
-                                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(quantity = v) } },
-                                label = { Text("পরিমাণ") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = item.unit,
-                                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(unit = v) } },
-                                label = { Text("একক") },
-                                placeholder = { Text("কেজি/টি") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            MoneyInputField(
-                                value = item.unitPrice,
-                                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(unitPrice = v) } },
-                                label = "একক দাম",
-                                modifier = Modifier.weight(1f)
-                            )
-                            MoneyInputField(
-                                value = item.discount,
-                                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(discount = v) } },
-                                label = "ছাড়",
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
+                Spacer(Modifier.height(Space.sm))
+                HgPurchaseItem(item, viewModel)
             }
-            state.errors["items"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            state.errors["items"]?.let {
+                Spacer(Modifier.height(Space.sm))
+                Text(it, color = Hg.colors.expense, style = MaterialTheme.typography.bodySmall)
+            }
 
             if (state.items.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Spacer(Modifier.height(Space.md))
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
                     MoneyInputField(
                         value = state.extraChargeText,
                         onValueChange = { v -> viewModel.update { it.copy(extraChargeText = v) } },
@@ -379,6 +382,7 @@ fun ShopPurchaseScreen(
                 }
             }
 
+            Spacer(Modifier.height(Space.lg))
             MoneyInputField(
                 value = state.paidNowText,
                 onValueChange = { v -> viewModel.update { it.copy(paidNowText = v) } },
@@ -386,6 +390,7 @@ fun ShopPurchaseScreen(
                 error = state.errors["paidNow"]
             )
             if ((state.paidNowPoisha ?: 0L) > 0) {
+                Spacer(Modifier.height(Space.md))
                 SelectionField(
                     label = "যে অ্যাকাউন্ট থেকে দিলেন",
                     selectedText = state.accounts.firstOrNull { it.id == state.accountId }?.name ?: "বেছে নিন",
@@ -396,46 +401,123 @@ fun ShopPurchaseScreen(
                 )
             }
 
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("মোট ক্রয়")
-                        Text(state.totalPoisha?.let { formatAmount(it) } ?: "—")
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("এখন পরিশোধ")
-                        Text(state.paidNowPoisha?.let { formatAmount(it) } ?: "—")
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("বকেয়া থাকবে", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            state.dueAfterPoisha?.let { formatAmount(it) } ?: "—",
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                    }
+            Spacer(Modifier.height(Space.md))
+            HgCard(padding = PaddingValues(Space.lg)) {
+                SummaryAmountRow("মোট ক্রয়", state.totalPoisha)
+                SummaryAmountRow("এখন পরিশোধ", state.paidNowPoisha)
+                HgDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(top = Space.sm),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("বকেয়া থাকবে", style = MaterialTheme.typography.titleSmall, color = Hg.colors.ink)
+                    Text(
+                        state.dueAfterPoisha?.let { formatAmount(it) } ?: "—",
+                        style = HgAmountType.medium,
+                        color = Hg.colors.warning
+                    )
                 }
             }
-
+            Spacer(Modifier.height(Space.md))
             DateField(
                 date = state.date,
                 onDateChange = { v -> viewModel.update { it.copy(date = v) } },
                 label = "তারিখ"
             )
-            OutlinedTextField(
+            Spacer(Modifier.height(Space.md))
+            HgTextField(
                 value = state.note,
                 onValueChange = { v -> viewModel.update { it.copy(note = v) } },
-                label = { Text("মন্তব্য (ঐচ্ছিক)") },
-                modifier = Modifier.fillMaxWidth()
+                label = "মন্তব্য (ঐচ্ছিক)"
             )
-            state.errors["save"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(
-                onClick = viewModel::save,
-                enabled = !state.saving,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (state.saving) "সংরক্ষণ হচ্ছে…" else "ক্রয় সংরক্ষণ করুন")
+            state.errors["save"]?.let {
+                Spacer(Modifier.height(Space.md))
+                HgNotice(title = it, tone = HgTone.Expense)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Space.lg))
+            HgNotice(
+                title = "পুরো ক্রয়ই এখন খরচ",
+                message = "যেটুকু এখন দিলেন না, সেটুকু দোকানের বকেয়া থাকবে। পরে পরিশোধ করলে আবার খরচ ধরা হবে না।",
+                tone = HgTone.Neutral
+            )
+            Spacer(Modifier.height(Space.xxl))
+        }
+    }
+}
+
+@Composable
+private fun SummaryAmountRow(label: String, amount: Long?) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = Space.xs),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = Hg.colors.inkSecondary)
+        Text(
+            amount?.let { formatAmount(it) } ?: "—",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Hg.colors.ink
+        )
+    }
+}
+
+@Composable
+private fun HgPurchaseItem(item: ItemUiState, viewModel: ShopPurchaseViewModel) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Radius.mdShape)
+            .background(Hg.colors.surfaceMuted)
+            .padding(Space.md),
+        verticalArrangement = Arrangement.spacedBy(Space.sm)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            HgTextField(
+                value = item.name,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(name = v) } },
+                label = "পণ্যের নাম",
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = { viewModel.removeItem(item.key) }) {
+                Icon(Icons.Filled.Close, contentDescription = "পণ্য সরান", tint = Hg.colors.inkSecondary)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            HgTextField(
+                value = item.quantity,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(quantity = v) } },
+                label = "পরিমাণ",
+                placeholder = "১",
+                keyboardType = KeyboardType.Decimal,
+                modifier = Modifier.weight(1f)
+            )
+            HgTextField(
+                value = item.unit,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(unit = v) } },
+                label = "একক",
+                placeholder = "কেজি",
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+            MoneyInputField(
+                value = item.unitPrice,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(unitPrice = v) } },
+                label = "একক দাম",
+                modifier = Modifier.weight(1f)
+            )
+            MoneyInputField(
+                value = item.discount,
+                onValueChange = { v -> viewModel.updateItem(item.key) { it.copy(discount = v) } },
+                label = "ছাড়",
+                modifier = Modifier.weight(1f)
+            )
+        }
+        item.toDraftOrNull()?.let { draft ->
+            Text(
+                "লাইন মোট ${formatAmount(draft.lineTotalPoisha)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Hg.colors.inkSecondary
+            )
         }
     }
 }
