@@ -92,23 +92,31 @@ class ReportRepository(
      * Net worth = assets − liabilities. Savings are inside account balances
      * already, so goals are never added again (no double counting).
      */
-    fun observeNetWorth(): Flow<NetWorth> = combine(
-        accounts.observeTotalBalance(),
-        ledger.balancesByLedger(LedgerType.RECEIVABLE),
-        ledger.balancesByLedger(LedgerType.LOAN_LIABILITY),
-        ledger.balancesByLedger(LedgerType.SHOP_LIABILITY),
-        planning.observeManualAssetTotal(),
-        planning.observeManualLiabilityTotal()
-    ) { values: Array<Any?> ->
-        @Suppress("UNCHECKED_CAST")
-        NetWorth(
-            accountsPoisha = values[0] as Long,
-            receivablesPoisha = (values[1] as Map<Long, Long>).values.sum(),
-            manualAssetsPoisha = values[4] as Long,
-            loansPoisha = -(values[2] as Map<Long, Long>).values.sum(),
-            shopDuesPoisha = -(values[3] as Map<Long, Long>).values.sum(),
-            manualLiabilitiesPoisha = values[5] as Long
-        )
+    fun observeNetWorth(): Flow<NetWorth> {
+        val assetsFlow = combine(
+            accounts.observeTotalBalance(),
+            ledger.balancesByLedger(LedgerType.RECEIVABLE),
+            planning.observeManualAssetTotal()
+        ) { accountTotal, receivables, manualAssets ->
+            Triple(accountTotal, receivables.values.sum(), manualAssets)
+        }
+        val liabilitiesFlow = combine(
+            ledger.balancesByLedger(LedgerType.LOAN_LIABILITY),
+            ledger.balancesByLedger(LedgerType.SHOP_LIABILITY),
+            planning.observeManualLiabilityTotal()
+        ) { loans, shops, manualLiabilities ->
+            Triple(-loans.values.sum(), -shops.values.sum(), manualLiabilities)
+        }
+        return combine(assetsFlow, liabilitiesFlow) { assets, liabilities ->
+            NetWorth(
+                accountsPoisha = assets.first,
+                receivablesPoisha = assets.second,
+                manualAssetsPoisha = assets.third,
+                loansPoisha = liabilities.first,
+                shopDuesPoisha = liabilities.second,
+                manualLiabilitiesPoisha = liabilities.third
+            )
+        }
     }
 
     /** Income vs expense for the last [months] calendar months (oldest first). */

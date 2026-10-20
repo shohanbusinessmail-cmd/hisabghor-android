@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   build:
@@ -33,10 +34,16 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest 2>&1 | tee build-test.log
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug 2>&1 | tee build-apk.log
 
       - name: Upload unit test reports
         if: always()
@@ -54,3 +61,24 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30
+
+      # The development sandbox cannot download Actions logs, so on failure we
+      # mirror the compiler/test errors into issue #1 where they are readable
+      # through the GitHub API. Safe: contains no secrets (build output only).
+      - name: Mirror failure log to diagnostics issue
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### CI failed — run ${{ github.run_id }} · commit ${{ github.sha }}"
+            echo '```text'
+            grep -hE "^e: |^w: .*error|error:|FAILURE:|What went wrong|> Task .*FAILED|Execution failed" build-test.log build-apk.log 2>/dev/null | head -n 300
+            echo "----- tail -----"
+            tail -n 60 build-test.log build-apk.log 2>/dev/null
+            echo '```'
+          } > comment.md
+          # GitHub comment body limit is 65536 chars; keep well under it.
+          head -c 60000 comment.md > comment-trimmed.md
+          gh issue comment 1 --body-file comment-trimmed.md || true
