@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Emerald background for the adaptive launcher icon. -->
+<!--
+  HisabGhor launcher background: brand emerald with a single, very soft
+  diagonal shift towards the deeper brand tone. Kept intentionally subtle so
+  the white monogram stays the only strong shape.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
@@ -9,14 +13,14 @@
     <path android:pathData="M0,0h108v108h-108z">
         <aapt:attr name="android:fillColor">
             <gradient
-                android:endX="108"
-                android:endY="108"
-                android:startX="0"
+                android:type="linear"
+                android:startX="18"
                 android:startY="0"
-                android:type="linear">
-                <item android:color="#FF11998E" android:offset="0.0" />
-                <item android:color="#FF0B7A4B" android:offset="0.55" />
-                <item android:color="#FF065C38" android:offset="1.0" />
+                android:endX="90"
+                android:endY="108">
+                <item android:color="#FF0A8A62" android:offset="0.0" />
+                <item android:color="#FF087F5B" android:offset="0.5" />
+                <item android:color="#FF066649" android:offset="1.0" />
             </gradient>
         </aapt:attr>
     </path>
