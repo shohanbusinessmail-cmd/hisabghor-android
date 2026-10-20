@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">হিসাবঘর</string>
+    <string name="app_name_en">HisabGhor</string>
+    <string name="app_tagline">আপনার সব হিসাব, এক জায়গায়।</string>
+    <string name="notification_channel_reminders">অনুস্মারক</string>
+    <string name="notification_channel_reminders_desc">কিস্তি, বিল ও ঋণের মেয়াদের অনুস্মারক</string>
+</resources>
