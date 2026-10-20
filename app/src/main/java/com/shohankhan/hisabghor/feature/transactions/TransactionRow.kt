@@ -55,6 +55,7 @@ fun transactionKindIcon(kind: TransactionKind): ImageVector = when (kind) {
     TransactionKind.ADJUSTMENT -> Icons.Filled.Tune
 }
 
+@Composable
 private fun toneFor(kind: TransactionKind): Triple<Color, Color, Color> {
     // iconTint, iconBackground, amountColor
     return when (kind.displaySign()) {
