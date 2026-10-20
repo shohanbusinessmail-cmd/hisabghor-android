@@ -85,6 +85,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
+import com.shohankhan.hisabghor.core.designsystem.AmountText
 import com.shohankhan.hisabghor.core.designsystem.Eyebrow
 import com.shohankhan.hisabghor.core.designsystem.Hg
 import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
