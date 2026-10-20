@@ -59,6 +59,40 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import com.shohankhan.hisabghor.core.designsystem.AmountText
+import com.shohankhan.hisabghor.core.designsystem.Eyebrow
+import com.shohankhan.hisabghor.core.designsystem.FormSectionLabel
+import com.shohankhan.hisabghor.core.designsystem.Hg
+import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
+import com.shohankhan.hisabghor.core.designsystem.HgAmountType
+import com.shohankhan.hisabghor.core.designsystem.HgButton
+import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
+import com.shohankhan.hisabghor.core.designsystem.HgCard
+import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
+import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgSegmented
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
+import com.shohankhan.hisabghor.core.designsystem.IconChip
+import com.shohankhan.hisabghor.core.designsystem.Radius
+import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
+import com.shohankhan.hisabghor.core.designsystem.Space
+import com.shohankhan.hisabghor.core.designsystem.Stroke
 
 enum class EditorKind(val label: String) {
     INCOME("আয়"), EXPENSE("খরচ"), REFUND("রিফান্ড")
@@ -285,40 +319,7 @@ class TransactionEditorViewModel(
 }
 
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import com.shohankhan.hisabghor.core.designsystem.AmountText
-import com.shohankhan.hisabghor.core.designsystem.Eyebrow
-import com.shohankhan.hisabghor.core.designsystem.FormSectionLabel
-import com.shohankhan.hisabghor.core.designsystem.Hg
-import com.shohankhan.hisabghor.core.designsystem.HgAmountInput
-import com.shohankhan.hisabghor.core.designsystem.HgAmountType
-import com.shohankhan.hisabghor.core.designsystem.HgButton
-import com.shohankhan.hisabghor.core.designsystem.HgButtonStyle
-import com.shohankhan.hisabghor.core.designsystem.HgCard
-import com.shohankhan.hisabghor.core.designsystem.HgFormBottomBar
-import com.shohankhan.hisabghor.core.designsystem.HgScreen
-import com.shohankhan.hisabghor.core.designsystem.HgSegmented
-import com.shohankhan.hisabghor.core.designsystem.HgTextField
-import com.shohankhan.hisabghor.core.designsystem.IconChip
-import com.shohankhan.hisabghor.core.designsystem.Radius
-import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
-import com.shohankhan.hisabghor.core.designsystem.Space
-import com.shohankhan.hisabghor.core.designsystem.Stroke
+
 @Composable
 fun TransactionEditorScreen(
     kindArg: String,
@@ -344,14 +345,11 @@ fun TransactionEditorScreen(
         }
     )
     val state by viewModel.state.collectAsState()
-
     LaunchedEffect(state.saved) {
         if (state.saved) onSaved()
     }
-
     val itemsTotal = state.itemsTotalPoisha
     val amountPreview = itemsTotal ?: BengaliNumber.parsePoisha(state.amountText)
-
     HgScreen(
         title = if (state.isEdit) "লেনদেন সম্পাদনা" else {
             when (state.editorKind) {
@@ -401,7 +399,6 @@ fun TransactionEditorScreen(
                 )
                 Spacer(Modifier.height(Space.lg))
             }
-
             if (state.items.isEmpty()) {
                 HgAmountInput(
                     value = state.amountText,
@@ -414,7 +411,6 @@ fun TransactionEditorScreen(
                     viewModel.setAmount(poishaToInputText(current + delta))
                 })
             }
-
             Spacer(Modifier.height(Space.lg))
             HgTextField(
                 value = state.title,
@@ -424,7 +420,6 @@ fun TransactionEditorScreen(
                 helper = "খালি রাখলে ক্যাটাগরির নাম ব্যবহার হবে"
             )
             Spacer(Modifier.height(Space.md))
-
             FormSectionLabel("ক্যাটাগরি")
             CategoryChipGrid(
                 categories = state.categories,
@@ -434,7 +429,6 @@ fun TransactionEditorScreen(
             state.errors["category"]?.let {
                 Text(it, color = Hg.colors.expense, style = MaterialTheme.typography.bodySmall)
             }
-
             Spacer(Modifier.height(Space.md))
             SelectionField(
                 label = when (state.editorKind) {
@@ -454,12 +448,10 @@ fun TransactionEditorScreen(
                 onDateChange = viewModel::setDate,
                 label = "তারিখ"
             )
-
             if (state.editorKind == EditorKind.EXPENSE) {
                 Spacer(Modifier.height(Space.lg))
                 ItemsSection(state, viewModel)
             }
-
             Spacer(Modifier.height(Space.lg))
             HgTextField(
                 value = state.note,
@@ -468,7 +460,6 @@ fun TransactionEditorScreen(
                 singleLine = false,
                 minLines = 2
             )
-
             state.errors["save"]?.let {
                 Spacer(Modifier.height(Space.md))
                 com.shohankhan.hisabghor.core.designsystem.HgNotice(
@@ -480,7 +471,6 @@ fun TransactionEditorScreen(
         }
     }
 }
-
 @Composable
 private fun QuickAmounts(onAdd: (Long) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
@@ -501,7 +491,6 @@ private fun QuickAmounts(onAdd: (Long) -> Unit) {
         }
     }
 }
-
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun CategoryChipGrid(
@@ -544,7 +533,6 @@ private fun CategoryChipGrid(
         )
     }
 }
-
 @Composable
 private fun ItemsSection(state: TransactionEditorUiState, viewModel: TransactionEditorViewModel) {
     var expanded by remember { mutableStateOf(state.items.isNotEmpty()) }
@@ -611,7 +599,6 @@ private fun ItemsSection(state: TransactionEditorUiState, viewModel: Transaction
         }
     }
 }
-
 @Composable
 private fun HgItemEditor(item: ItemUiState, viewModel: TransactionEditorViewModel) {
     Column(
