@@ -52,6 +52,7 @@ import com.shohankhan.hisabghor.core.designsystem.HgAmountType
 import com.shohankhan.hisabghor.core.designsystem.HgChip
 import com.shohankhan.hisabghor.core.designsystem.HgDivider
 import com.shohankhan.hisabghor.core.designsystem.HgScreen
+import com.shohankhan.hisabghor.core.designsystem.HgTextField
 import com.shohankhan.hisabghor.core.designsystem.Radius
 import com.shohankhan.hisabghor.core.designsystem.ScreenPadding
 import com.shohankhan.hisabghor.core.designsystem.SelectionField
@@ -180,21 +181,19 @@ fun TransactionListScreen(
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            OutlinedTextField(
+            HgTextField(
                 value = filter.query,
                 onValueChange = { text -> viewModel.updateFilter { it.copy(query = text) } },
-                placeholder = { Text("শিরোনাম বা মন্তব্য খুঁজুন") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                trailingIcon = if (filter.query.isNotEmpty()) {
+                label = "খুঁজুন",
+                placeholder = "শিরোনাম বা মন্তব্য",
+                leadingIcon = Icons.Filled.Search,
+                trailing = if (filter.query.isNotEmpty()) {
                     {
                         IconButton(onClick = { viewModel.updateFilter { it.copy(query = "") } }) {
                             Icon(Icons.Filled.Clear, contentDescription = "লেখা মুছুন")
                         }
                     }
                 } else null,
-                singleLine = true,
-                shape = Radius.field,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = ScreenPadding, vertical = Space.sm)

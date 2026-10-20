@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -407,7 +408,7 @@ fun SettingsScreen(
         title = "সেটিংস",
         subtitle = "নিরাপত্তা, ব্যাকআপ ও পছন্দ",
         onBack = onBack,
-        bottomBar = { SnackbarHost(snackbarHost, Modifier.padding(bottom = Space.sm)) }
+        bottomBar = { SnackbarHost(snackbarHost, Modifier.navigationBarsPadding().padding(bottom = Space.sm)) }
     ) { padding ->
         Column(
             Modifier

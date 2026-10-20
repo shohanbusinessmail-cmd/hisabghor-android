@@ -501,12 +501,10 @@ fun AccountDetailScreen(
                         label = "আসল ব্যালান্স (টাকা)",
                         error = error
                     )
-                    OutlinedTextField(
+                    HgTextField(
                         value = noteText,
                         onValueChange = { noteText = it },
-                        label = { Text("কারণ (ঐচ্ছিক)") },
-                        shape = Radius.field,
-                        modifier = Modifier.fillMaxWidth()
+                        label = "কারণ (ঐচ্ছিক)"
                     )
                 }
             },
