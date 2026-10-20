@@ -55,18 +55,13 @@ class PlanningRepository(
                 val flows = budgets.map { budget ->
                     val (from, to) = currentBudgetRange(budget)
                     db.postingDao().observeExpenseForBudget(budget.categoryId, from, to)
-                        .let { spentFlow ->
-                            spentFlow.flowMap { spent ->
-                                BudgetWithUsage(budget, categoryById[budget.categoryId], spent, from, to)
-                            }
+                        .map { spent ->
+                            BudgetWithUsage(budget, categoryById[budget.categoryId], spent, from, to)
                         }
                 }
                 combine(flows) { it.toList() }
             }
         }
-
-    private fun <T, R> Flow<T>.flowMap(transform: (T) -> R): Flow<R> =
-        kotlinx.coroutines.flow.map(this, transform)
 
     suspend fun addBudget(categoryId: Long?, period: BudgetPeriod, amountPoisha: Long, anchorDay: Int): Long {
         val now = Dates.nowMs()

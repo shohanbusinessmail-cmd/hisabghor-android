@@ -2,11 +2,9 @@ package com.shohankhan.hisabghor
 
 import android.app.Application
 import androidx.work.Configuration
+import com.shohankhan.hisabghor.core.notifications.ReminderScheduler
 import com.shohankhan.hisabghor.data.SeedData
 import com.shohankhan.hisabghor.di.AppContainer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**

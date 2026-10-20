@@ -31,7 +31,7 @@ class ShopRepository(
         }
 
     fun observeTotalShopDue(): Flow<Long> =
-        combine(ledger.balancesByLedger(LedgerType.SHOP_LIABILITY)) { balances ->
+        ledger.balancesByLedger(LedgerType.SHOP_LIABILITY).map { balances ->
             -balances.values.sum()
         }
 

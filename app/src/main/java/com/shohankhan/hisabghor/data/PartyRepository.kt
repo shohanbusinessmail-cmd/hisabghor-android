@@ -45,7 +45,7 @@ class PartyRepository(
     }
 
     fun observeTotalReceivables(): Flow<Long> =
-        combine(ledger.balancesByLedger(LedgerType.RECEIVABLE)) { it.values.sum() }
+        ledger.balancesByLedger(LedgerType.RECEIVABLE).map { it.values.sum() }
 
     fun observeById(id: Long): Flow<PartyEntity?> = partyDao.observeById(id)
 

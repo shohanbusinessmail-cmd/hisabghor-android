@@ -177,6 +177,7 @@ class BackupRepository(
             payload.recurringRules.forEach { db.recurringRuleDao().insert(it.toEntity()) }
             payload.netWorthItems.forEach { db.netWorthItemDao().insert(it.toEntity()) }
             payload.attachments.forEach { db.transactionDao().insertAttachment(it.toEntity()) }
+            payload.auditEvents.forEach { db.auditDao().insert(it.toEntity()) }
 
             // Final integrity gate inside the transaction: rollback on any problem.
             val unbalanced = db.postingDao().countUnbalancedTransactions()

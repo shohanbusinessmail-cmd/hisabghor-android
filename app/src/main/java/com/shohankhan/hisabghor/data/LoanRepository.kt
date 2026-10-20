@@ -121,38 +121,39 @@ class LoanRepository(
                 )
             )
             val (txnKind, title, postings) = when {
-            kind == LoanKind.PERSONAL_BORROW && moneyMovedNow -> Triple(
-                TransactionKind.LOAN_RECEIVE, "ধার নেওয়া — ${displayName.trim()}",
-                PostingFactory.loanReceive(loanId, accountId!!, principalPoisha)
+                kind == LoanKind.PERSONAL_BORROW && moneyMovedNow -> Triple(
+                    TransactionKind.LOAN_RECEIVE, "ধার নেওয়া — ${displayName.trim()}",
+                    PostingFactory.loanReceive(loanId, accountId!!, principalPoisha)
+                )
+                kind == LoanKind.PERSONAL_BORROW -> Triple(
+                    TransactionKind.OPENING_BALANCE, "আগের ধার — ${displayName.trim()}",
+                    PostingFactory.openingLoanLiability(loanId, principalPoisha)
+                )
+                kind == LoanKind.PERSONAL_LEND && moneyMovedNow -> Triple(
+                    TransactionKind.LEND_OUT, "ধার দেওয়া — ${displayName.trim()}",
+                    PostingFactory.lendOut(loanId, accountId!!, principalPoisha)
+                )
+                else -> Triple(
+                    TransactionKind.OPENING_BALANCE, "আগের পাওনা — ${displayName.trim()}",
+                    PostingFactory.openingReceivable(loanId, principalPoisha)
+                )
+            }
+            ledger.record(
+                transaction = TransactionEntity(
+                    kind = txnKind,
+                    occurredAt = startDateMs,
+                    title = title,
+                    amountPoisha = principalPoisha,
+                    accountId = if (moneyMovedNow) accountId else null,
+                    partyId = partyId,
+                    loanId = loanId,
+                    createdAt = now, updatedAt = now
+                ),
+                postings = postings,
+                auditSummary = title
             )
-            kind == LoanKind.PERSONAL_BORROW -> Triple(
-                TransactionKind.OPENING_BALANCE, "আগের ধার — ${displayName.trim()}",
-                PostingFactory.openingLoanLiability(loanId, principalPoisha)
-            )
-            kind == LoanKind.PERSONAL_LEND && moneyMovedNow -> Triple(
-                TransactionKind.LEND_OUT, "ধার দেওয়া — ${displayName.trim()}",
-                PostingFactory.lendOut(loanId, accountId!!, principalPoisha)
-            )
-            else -> Triple(
-                TransactionKind.OPENING_BALANCE, "আগের পাওনা — ${displayName.trim()}",
-                PostingFactory.openingReceivable(loanId, principalPoisha)
-            )
+            loanId
         }
-        ledger.record(
-            transaction = TransactionEntity(
-                kind = txnKind,
-                occurredAt = startDateMs,
-                title = title,
-                amountPoisha = principalPoisha,
-                accountId = if (moneyMovedNow) accountId else null,
-                partyId = partyId,
-                loanId = loanId,
-                createdAt = now, updatedAt = now
-            ),
-            postings = postings,
-            auditSummary = "$title"
-        )
-        return loanId
     }
 
     /** NGO or bank loan with a generated installment schedule (estimate). */
@@ -179,9 +180,8 @@ class LoanRepository(
         require(installmentCount > 0) { "installment count required" }
         if (moneyMovedNow) require(accountId != null) { "account required when money moves now" }
         val now = Dates.nowMs()
-        var loanId = 0L
-        db.withTransaction {
-            loanId = loanDao.insert(
+        return db.withTransaction {
+            val loanId = loanDao.insert(
                 LoanEntity(
                     kind = kind,
                     organizationName = organizationName.trim(),
@@ -220,30 +220,33 @@ class LoanRepository(
             })
 
             val title = "ঋণ গ্রহণ — ${organizationName.trim()}"
-        val postings = if (moneyMovedNow) {
-            val chargeCategoryId = if (disbursedPoisha < principalPoisha) {
-                categories.findOrCreate(CategoryRepository.NAME_LOAN_INTEREST, CategoryKind.EXPENSE, "loan_interest")
-            } else null
-            PostingFactory.loanReceiveWithUpfrontCharge(
-                loanId, accountId!!, principalPoisha, disbursedPoisha, chargeCategoryId
+            val postings = if (moneyMovedNow) {
+                val chargeCategoryId = if (disbursedPoisha < principalPoisha) {
+                    categories.findOrCreate(
+                        CategoryRepository.NAME_LOAN_INTEREST, CategoryKind.EXPENSE, "loan_interest"
+                    )
+                } else null
+                PostingFactory.loanReceiveWithUpfrontCharge(
+                    loanId, accountId!!, principalPoisha, disbursedPoisha, chargeCategoryId
+                )
+            } else {
+                PostingFactory.openingLoanLiability(loanId, principalPoisha)
+            }
+            ledger.record(
+                transaction = TransactionEntity(
+                    kind = if (moneyMovedNow) TransactionKind.LOAN_RECEIVE else TransactionKind.OPENING_BALANCE,
+                    occurredAt = startDateMs,
+                    title = title,
+                    amountPoisha = principalPoisha,
+                    accountId = if (moneyMovedNow) accountId else null,
+                    loanId = loanId,
+                    createdAt = now, updatedAt = now
+                ),
+                postings = postings,
+                auditSummary = title
             )
-        } else {
-            PostingFactory.openingLoanLiability(loanId, principalPoisha)
+            loanId
         }
-        ledger.record(
-            transaction = TransactionEntity(
-                kind = if (moneyMovedNow) TransactionKind.LOAN_RECEIVE else TransactionKind.OPENING_BALANCE,
-                occurredAt = startDateMs,
-                title = title,
-                amountPoisha = principalPoisha,
-                accountId = if (moneyMovedNow) accountId else null,
-                loanId = loanId,
-                createdAt = now, updatedAt = now
-            ),
-            postings = postings,
-            auditSummary = title
-        )
-        return loanId
     }
 
     /** Schedule chosen by interest method; all variants keep exact poisha sums. */
@@ -523,7 +526,11 @@ class LoanRepository(
 
     /** Deletes a loan only when it has no live transactions (history stays safe). */
     suspend fun deleteLoanIfUnused(loanId: Long): Boolean {
-        val live = db.transactionDao().observeFiltered(loanId = loanId, q = "").first()
+        val live = db.transactionDao().observeFiltered(
+            kind = null, categoryId = null, accountId = null, shopId = null,
+            loanId = loanId, partyId = null, fromMs = null, toMs = null,
+            minAmount = null, maxAmount = null, q = ""
+        ).first()
         if (live.isNotEmpty()) return false
         val loan = loanDao.getById(loanId) ?: return false
         loanDao.delete(loan) // installments cascade

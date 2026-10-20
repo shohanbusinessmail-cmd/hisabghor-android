@@ -46,7 +46,8 @@ data class BackupPayload(
     val reminders: List<ReminderDto> = emptyList(),
     val recurringRules: List<RecurringRuleDto> = emptyList(),
     val netWorthItems: List<NetWorthItemDto> = emptyList(),
-    val attachments: List<AttachmentDto> = emptyList()
+    val attachments: List<AttachmentDto> = emptyList(),
+    val auditEvents: List<AuditEventDto> = emptyList()
 )
 
 @Serializable

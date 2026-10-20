@@ -44,7 +44,9 @@ class LedgerRepository(
         items: List<TransactionItemEntity> = emptyList(),
         allocations: List<InstallmentAllocationEntity> = emptyList(),
         replacesTransactionId: Long? = null,
-        auditSummary: String
+        auditSummary: String,
+        /** Extra writes that must commit or roll back together with this event. */
+        afterInsert: suspend (transactionId: Long) -> Unit = {}
     ): Long {
         val sum = postings.fold(0L) { acc, p -> Math.addExact(acc, p.signedAmountPoisha) }
         require(sum == 0L) { "postings must balance to zero" }
